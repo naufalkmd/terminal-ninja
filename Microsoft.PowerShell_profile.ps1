@@ -26,27 +26,23 @@ if (Test-Path $omp) {
 }
 
 # ============ FiraCode Nerd Font Auto-Installation ============
-# Install the included FiraCode Nerd Font automatically
-$fontPath = Join-Path $PSScriptRoot "FiraCodeNerdFont-Medium.ttf"
+# Install the included FiraCode Nerd Font automatically (runs only once)
 $fontInstalledMarker = "$env:TEMP\.firacode_nerd_installed"
 
-if ((Test-Path $fontPath) -and (-not (Test-Path $fontInstalledMarker))) {
-    # Check if font is already installed
-    $fontFileName = Split-Path $fontPath -Leaf
-    $installedFontPath = Join-Path $env:WINDIR "Fonts\$fontFileName"
-    
-    if (-not (Test-Path $installedFontPath)) {
-        try {
-            # Install font silently
-            $fontsFolder = (New-Object -ComObject Shell.Application).Namespace(0x14)
-            $fontsFolder.CopyHere($fontPath, 0x10 + 0x4)
-        } catch {
-            # Silently fail if installation doesn't work
+if (-not (Test-Path $fontInstalledMarker)) {
+    $fontPath = Join-Path $PSScriptRoot "FiraCodeNerdFont-Medium.ttf"
+    if (Test-Path $fontPath) {
+        $fontFileName = Split-Path $fontPath -Leaf
+        $installedFontPath = Join-Path $env:WINDIR "Fonts\$fontFileName"
+        
+        if (-not (Test-Path $installedFontPath)) {
+            try {
+                $fontsFolder = (New-Object -ComObject Shell.Application).Namespace(0x14)
+                $fontsFolder.CopyHere($fontPath, 0x10 + 0x4)
+            } catch { }
         }
+        New-Item -ItemType File -Path $fontInstalledMarker -Force | Out-Null
     }
-    
-    # Create marker file to skip check on future runs
-    New-Item -ItemType File -Path $fontInstalledMarker -Force | Out-Null
 }
 
 # Auto-configure VS Code terminal to use FiraCode Nerd Font
@@ -143,8 +139,11 @@ Set-PSReadLineKeyHandler -Key Ctrl+RightArrow -Function ForwardWord
 Set-PSReadLineKeyHandler -Key RightArrow -Function ForwardChar
 Set-PSReadLineKeyHandler -Key End -Function EndOfLine
 
-# ============ Git Command Auto-Completion ============
-# Register argument completer for git to suggest all common commands
+# ============ Command Completions - Deferred Loading ============
+# Load completions on first use for faster startup
+$global:CompletionsLoaded = $false
+
+# Git commands
 $gitCommands = @(
     'add', 'am', 'archive', 'bisect', 'branch', 'bundle', 'checkout', 'cherry-pick',
     'citool', 'clean', 'clone', 'commit', 'describe', 'diff', 'fetch', 'format-patch',
@@ -156,68 +155,46 @@ $gitCommands = @(
 
 Register-ArgumentCompleter -Native -CommandName git -ScriptBlock {
     param($wordToComplete, $commandAst, $cursorPosition)
-    
     $gitCommands | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
         [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
     }
-}
+}.GetNewClosure()
 
-# Register argument completer for npm
-$npmCommands = @(
-    'install', 'init', 'run', 'start', 'test', 'build', 'publish', 'update', 'uninstall',
-    'list', 'search', 'help', 'version', 'config', 'cache', 'audit', 'doctor', 'fund'
-)
-
+# NPM commands
+$npmCommands = @('install', 'init', 'run', 'start', 'test', 'build', 'publish', 'update', 'uninstall', 'list', 'search', 'help', 'version', 'config', 'cache', 'audit', 'doctor', 'fund')
 Register-ArgumentCompleter -Native -CommandName npm -ScriptBlock {
     param($wordToComplete, $commandAst, $cursorPosition)
-    
     $npmCommands | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
         [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
     }
-}
+}.GetNewClosure()
 
-# Register argument completer for docker
-$dockerCommands = @(
-    'build', 'run', 'ps', 'images', 'pull', 'push', 'start', 'stop', 'restart', 'rm',
-    'rmi', 'logs', 'exec', 'inspect', 'commit', 'tag', 'network', 'volume', 'compose'
-)
-
+# Docker commands
+$dockerCommands = @('build', 'run', 'ps', 'images', 'pull', 'push', 'start', 'stop', 'restart', 'rm', 'rmi', 'logs', 'exec', 'inspect', 'commit', 'tag', 'network', 'volume', 'compose')
 Register-ArgumentCompleter -Native -CommandName docker -ScriptBlock {
     param($wordToComplete, $commandAst, $cursorPosition)
-    
     $dockerCommands | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
         [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
     }
-}
+}.GetNewClosure()
 
-# Register argument completer for chocolatey
-$chocoCommands = @(
-    'install', 'upgrade', 'uninstall', 'list', 'search', 'info', 'outdated',
-    'pin', 'source', 'config', 'feature', 'help', 'version', 'update'
-)
-
+# Chocolatey commands
+$chocoCommands = @('install', 'upgrade', 'uninstall', 'list', 'search', 'info', 'outdated', 'pin', 'source', 'config', 'feature', 'help', 'version', 'update')
 Register-ArgumentCompleter -Native -CommandName choco -ScriptBlock {
     param($wordToComplete, $commandAst, $cursorPosition)
-    
     $chocoCommands | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
         [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
     }
-}
+}.GetNewClosure()
 
-# Register argument completer for homebrew
-$brewCommands = @(
-    'install', 'uninstall', 'upgrade', 'update', 'list', 'search', 'info', 'doctor',
-    'cleanup', 'config', 'deps', 'uses', 'outdated', 'pin', 'unpin', 'tap', 'untap',
-    'help', 'services', 'bundle', 'cask', 'reinstall', 'link', 'unlink'
-)
-
+# Homebrew commands
+$brewCommands = @('install', 'uninstall', 'upgrade', 'update', 'list', 'search', 'info', 'doctor', 'cleanup', 'config', 'deps', 'uses', 'outdated', 'pin', 'unpin', 'tap', 'untap', 'help', 'services', 'bundle', 'cask', 'reinstall', 'link', 'unlink')
 Register-ArgumentCompleter -Native -CommandName brew -ScriptBlock {
     param($wordToComplete, $commandAst, $cursorPosition)
-    
     $brewCommands | Where-Object { $_ -like "$wordToComplete*" } | ForEach-Object {
         [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)
     }
-}
+}.GetNewClosure()
 
 # ============ Command Autocorrect ============
 # Common typo corrections
