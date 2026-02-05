@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>terminalninja</id>
+    <version>1.0.0</version>
+    <title>TerminalNinja 🥷</title>
+    <authors>naufalkmd</authors>
+    <owners>naufalkmd</owners>
+    <licenseUrl>https://github.com/naufalkmd/enhanced-powershell-profile/blob/main/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/naufalkmd/enhanced-powershell-profile</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>
+      TerminalNinja - Master your terminal with lightning-fast auto-suggestions and ninja-level command completions.
+      
+      Features:
+      - PSReadLine 2.4.5+ with predictive IntelliSense
+      - Command completions for Git, NPM, Docker, Chocolatey, Homebrew
+      - Auto-correct for common typos
+      - Oh My Posh theme integration
+      - Custom aliases and functions
+    </description>
+    <summary>TerminalNinja - Master your PowerShell terminal like a ninja</summary>
+    <releaseNotes>Initial release with full auto-completion support</releaseNotes>
+    <tags>powershell profile terminal oh-my-posh psreadline autocomplete git</tags>
+    <dependencies>
+      <dependency id="powershell-core" version="7.0.0" />
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>
+

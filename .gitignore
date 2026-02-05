@@ -1,0 +1,28 @@
+# PowerShell
+*.ps1~
+*.backup
+*.backup.*
+
+# Chocolatey
+*.nupkg
+*.nuget.props
+*.nuget.targets
+
+# Build outputs
+release.tar.gz
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Temp files
+~$*
