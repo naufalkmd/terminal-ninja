@@ -2,7 +2,7 @@ class Terminalninja < Formula
   desc "TerminalNinja - Master your terminal with auto-suggestions and smart completions"
   homepage "https://github.com/naufalkmd/terminalninja"
   url "https://github.com/naufalkmd/terminalninja/archive/refs/tags/v1.0.0.tar.gz"
-  sha256 "YOUR_SHA256_HASH_HERE"
+  sha256 "92dd24a05c350f315fa09904d105192d6cf7fe98f1ec6039f19e4acdf63d9566"
   license "MIT"
 
   depends_on "powershell"

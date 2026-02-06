@@ -1,7 +1,10 @@
 $ErrorActionPreference = 'Stop'
 
 $packageName = 'terminalninja'
-$profileUrl = 'https://raw.githubusercontent.com/YOUR_USERNAME/terminalninja/main/Microsoft.PowerShell_profile.ps1'
+$toolsDir = "$(Split-Path -parent $MyInvocation.MyCommand.Definition)"
+$profileSource = Join-Path $toolsDir "Microsoft.PowerShell_profile.ps1"
+$themeSource = Join-Path $toolsDir "terminalninja.omp.json"
+$backupPath = $null
 
 Write-Host "Installing TerminalNinja 🥷..." -ForegroundColor Cyan
 
@@ -18,14 +21,25 @@ if (-not (Test-Path $profileDir)) {
     New-Item -ItemType Directory -Path $profileDir -Force | Out-Null
 }
 
-# Download profile
-Write-Host "Downloading profile from GitHub..." -ForegroundColor Cyan
+# Copy profile from package
+Write-Host "Installing PowerShell profile..." -ForegroundColor Cyan
 try {
-    Invoke-WebRequest -Uri $profileUrl -OutFile $PROFILE -UseBasicParsing
+    Copy-Item $profileSource $PROFILE -Force
     Write-Host "Profile installed successfully!" -ForegroundColor Green
 } catch {
-    Write-Error "Failed to download profile: $_"
+    Write-Error "Failed to install profile: $_"
     exit 1
+}
+
+# Copy Oh My Posh theme to profile directory
+if (Test-Path $themeSource) {
+    try {
+        $themeDestination = Join-Path $profileDir "terminalninja.omp.json"
+        Copy-Item $themeSource $themeDestination -Force
+        Write-Host "Oh My Posh theme installed!" -ForegroundColor Green
+    } catch {
+        Write-Warning "Failed to install theme file: $_"
+    }
 }
 
 # Install PSReadLine 2.4.5+ if needed
@@ -49,5 +63,8 @@ Write-Host "  - Auto-suggestions and completions" -ForegroundColor White
 Write-Host "  - Git, NPM, Docker, Choco, Brew completions" -ForegroundColor White
 Write-Host "  - Auto-correct for common typos" -ForegroundColor White
 Write-Host "  - Custom aliases (ll, gs, gaa, gc, gp)" -ForegroundColor White
-Write-Host "`nYour old profile was backed up to:" -ForegroundColor Yellow
-Write-Host "  $backupPath" -ForegroundColor Gray
+
+if ($backupPath) {
+    Write-Host "`nYour old profile was backed up to:" -ForegroundColor Yellow
+    Write-Host "  $backupPath" -ForegroundColor Gray
+}

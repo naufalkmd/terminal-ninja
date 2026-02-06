@@ -22,9 +22,6 @@
     <summary>TerminalNinja - Master your PowerShell terminal like a ninja</summary>
     <releaseNotes>Initial release with full auto-completion support</releaseNotes>
     <tags>powershell profile terminal oh-my-posh psreadline autocomplete git</tags>
-    <dependencies>
-      <dependency id="powershell-core" version="7.0.0" />
-    </dependencies>
   </metadata>
   <files>
     <file src="tools\**" target="tools" />
