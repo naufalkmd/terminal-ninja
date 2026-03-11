@@ -4,7 +4,6 @@ TerminalNinja is a cross-shell terminal setup that applies a shared Starship pro
 
 <img width="764" height="88" alt="image" src="https://github.com/user-attachments/assets/0d8294dc-9035-4965-bda3-c1700500fee4" />
 
-
 ## Quick Start
 
 Recommended install paths:
