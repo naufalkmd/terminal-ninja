@@ -1,11 +1,9 @@
 class Terminalninja < Formula
   desc "Shared Starship prompt and shell-native terminal workflow across PowerShell, bash, zsh, and WSL"
   homepage "https://github.com/naufalkmd/terminal-ninja"
-  url "https://github.com/naufalkmd/terminal-ninja/archive/refs/tags/v1.0.0.tar.gz"
-  sha256 "92dd24a05c350f315fa09904d105192d6cf7fe98f1ec6039f19e4acdf63d9566"
+  url "https://github.com/naufalkmd/terminal-ninja/archive/refs/tags/v1.0.1.tar.gz"
+  sha256 "374c9ef0d9cfe40c1df690efbaa009b9c13ef5cdde90c09cf00e6765f5314646"
   license "MIT"
-
-  depends_on "powershell"
 
   def install
     libexec.install "terminalninja.ps1", "terminalninja.bash", "terminalninja.zsh", "starship.toml"
@@ -78,6 +76,9 @@ EOF
 
     This copies TerminalNinja assets into ~/.terminal-ninja and wires bash, zsh,
     and PowerShell startup files to source them.
+
+    If you want TerminalNinja inside PowerShell on macOS or Linux, install
+    PowerShell separately and then start pwsh after running terminalninja-install.
   EOS
 
   test do

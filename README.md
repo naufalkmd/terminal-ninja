@@ -104,8 +104,11 @@ Why Homebrew is recommended on macOS and Linux:
 - Familiar install path for shell tools
 - Easy upgrades through `brew upgrade`
 - Clean integration with the packaged `terminalninja-install` flow
+- Does not require PowerShell just to install TerminalNinja for bash or zsh
 
 After install, restart PowerShell, bash, zsh, and any WSL sessions.
+
+If you also use PowerShell on macOS or Linux, install PowerShell separately, then run `pwsh` after `terminalninja-install` has written the profile file.
 
 ### Alternative: Chocolatey
 

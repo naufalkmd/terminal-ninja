@@ -5,8 +5,6 @@ class Terminalninja < Formula
   sha256 "92dd24a05c350f315fa09904d105192d6cf7fe98f1ec6039f19e4acdf63d9566"
   license "MIT"
 
-  depends_on "powershell"
-
   def install
     libexec.install "terminalninja.ps1", "terminalninja.bash", "terminalninja.zsh", "starship.toml"
 
@@ -78,6 +76,9 @@ EOF
 
     This copies TerminalNinja assets into ~/.terminal-ninja and wires bash, zsh,
     and PowerShell startup files to source them.
+
+    If you want TerminalNinja inside PowerShell on macOS or Linux, install
+    PowerShell separately and then start pwsh after running terminalninja-install.
   EOS
 
   test do
