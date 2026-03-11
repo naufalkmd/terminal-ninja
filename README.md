@@ -116,6 +116,10 @@ Why Homebrew is recommended on macOS and Linux:
 
 After install, run `terminalninja-install`, then restart PowerShell, bash, zsh, and any WSL sessions. The Homebrew installer now detects supported shells and asks whether to apply TerminalNinja everywhere or only to the targets you select, using the same numbered selection style as the PowerShell setup flow.
 
+If you already installed an older macOS zsh setup, rerun `terminalninja-install` once after upgrading. It now removes older TerminalNinja blocks from `~/.zprofile` and `~/.zlogin` so the active zsh customization is applied from `~/.zshrc`.
+
+For zsh specifically, you can now reload the current shell with `source ~/.zshrc` after updating TerminalNinja. The zsh profile no longer relies on an exported one-time load flag that could leave child shells or manual reloads stale.
+
 If you also use PowerShell on macOS or Linux, install PowerShell separately, then run `pwsh` after `terminalninja-install` has written the profile file.
 
 ### Alternative: Chocolatey
@@ -131,7 +135,7 @@ What the installer does:
 
 - Copies TerminalNinja assets into `~/.terminal-ninja`
 - Adds a managed TerminalNinja block to PowerShell profile files
-- Adds a managed TerminalNinja block to common bash and zsh startup files, including login-shell files on macOS
+- Adds a managed TerminalNinja block to common bash startup files and to `~/.zshrc` for zsh
 - Detects WSL distros and adds the same managed block to Linux `~/.bashrc` and `~/.zshrc`
 - Leaves the rest of your profile content intact
 

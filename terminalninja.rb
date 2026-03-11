@@ -173,14 +173,7 @@ class Terminalninja < Formula
 
         mkdir -p "$(dirname "$target_file")"
         touch "$target_file"
-        temp_file="$(mktemp)"
-        awk '
-          BEGIN { skip = 0 }
-          /^# >>> TerminalNinja >>>$/ { skip = 1; next }
-          /^# <<< TerminalNinja <<</ { skip = 0; next }
-          skip == 0 { print }
-        ' "$target_file" > "$temp_file"
-        mv "$temp_file" "$target_file"
+        remove_managed_block "$target_file"
         if [ -s "$target_file" ] && [ "$(tail -c 1 "$target_file" 2>/dev/null || true)" != "" ]; then
           printf '\n' >> "$target_file"
         fi
@@ -191,12 +184,11 @@ $source_line
 EOF
       }
 
-      set_powershell_managed_block() {
+      remove_managed_block() {
         local target_file="$1"
         local temp_file
 
-        mkdir -p "$(dirname "$target_file")"
-        touch "$target_file"
+        [ -f "$target_file" ] || return 0
         temp_file="$(mktemp)"
         awk '
           BEGIN { skip = 0 }
@@ -205,6 +197,15 @@ EOF
           skip == 0 { print }
         ' "$target_file" > "$temp_file"
         mv "$temp_file" "$target_file"
+      }
+
+      set_powershell_managed_block() {
+        local target_file="$1"
+        local temp_file
+
+        mkdir -p "$(dirname "$target_file")"
+        touch "$target_file"
+        remove_managed_block "$target_file"
         if [ -s "$target_file" ] && [ "$(tail -c 1 "$target_file" 2>/dev/null || true)" != "" ]; then
           printf '\n' >> "$target_file"
         fi
@@ -234,8 +235,6 @@ EOF
       touch "$HOME/.bash_profile"
       touch "$HOME/.profile"
       touch "$HOME/.zshrc"
-      touch "$HOME/.zprofile"
-      touch "$HOME/.zlogin"
 
       if target_selected "bash"; then
         set_managed_block "$HOME/.bashrc" '[ -f "$HOME/.terminal-ninja/terminalninja.bash" ] && . "$HOME/.terminal-ninja/terminalninja.bash"'
@@ -244,9 +243,9 @@ EOF
       fi
 
       if target_selected "zsh"; then
+        remove_managed_block "$HOME/.zprofile"
+        remove_managed_block "$HOME/.zlogin"
         set_managed_block "$HOME/.zshrc" '[ -f "$HOME/.terminal-ninja/terminalninja.zsh" ] && . "$HOME/.terminal-ninja/terminalninja.zsh"'
-        set_managed_block "$HOME/.zprofile" '[ -f "$HOME/.terminal-ninja/terminalninja.zsh" ] && . "$HOME/.terminal-ninja/terminalninja.zsh"'
-        set_managed_block "$HOME/.zlogin" '[ -f "$HOME/.terminal-ninja/terminalninja.zsh" ] && . "$HOME/.terminal-ninja/terminalninja.zsh"'
       fi
 
       pwsh_profile_dir="${XDG_CONFIG_HOME:-$HOME/.config}/powershell"

@@ -1,10 +1,9 @@
 [[ -o interactive ]] || return 0 2>/dev/null || exit 0
 
-if [[ -n "${TERMINAL_NINJA_ZSH_LOADED:-}" ]]; then
-    return 0 2>/dev/null || exit 0
-fi
-export TERMINAL_NINJA_ZSH_LOADED=1
-export PATH="$HOME/.local/bin:$PATH"
+case ":$PATH:" in
+    *":$HOME/.local/bin:"*) ;;
+    *) export PATH="$HOME/.local/bin:$PATH" ;;
+esac
 
 _terminal_ninja_root="$(cd -- "$(dirname -- "${(%):-%N}")" && pwd)"
 export STARSHIP_CONFIG="${_terminal_ninja_root}/starship.toml"
@@ -23,8 +22,29 @@ _terminal_ninja_starship() {
     return 1
 }
 
+_terminal_ninja_reset_starship_zsh() {
+    autoload -Uz add-zsh-hook
+
+    while add-zsh-hook -d precmd prompt_starship_precmd >/dev/null 2>&1; do :; done
+    while add-zsh-hook -d preexec prompt_starship_preexec >/dev/null 2>&1; do :; done
+
+    if [[ -n "${__starship_preserved_zle_keymap_select:-}" ]]; then
+        zle -N zle-keymap-select "$__starship_preserved_zle_keymap_select" 2>/dev/null || true
+        unset __starship_preserved_zle_keymap_select
+    elif [[ -v widgets[zle-keymap-select] ]]; then
+        case "${widgets[zle-keymap-select]}" in
+            user:starship_zle-keymap-select|user:starship_zle-keymap-select-wrapped)
+                zle -D zle-keymap-select 2>/dev/null || true
+                ;;
+        esac
+    fi
+
+    unfunction prompt_starship_precmd prompt_starship_preexec starship_zle-keymap-select starship_zle-keymap-select-wrapped __starship_get_time >/dev/null 2>&1 || true
+}
+
 if _terminal_ninja_starship >/dev/null 2>&1 && [[ -f "$STARSHIP_CONFIG" ]]; then
     _terminal_ninja_starship_path="$(_terminal_ninja_starship)"
+    _terminal_ninja_reset_starship_zsh
     eval "$("${_terminal_ninja_starship_path}" init zsh)"
 fi
 
@@ -39,7 +59,7 @@ setopt SHARE_HISTORY
 autoload -Uz compinit
 if [[ -z "${_terminal_ninja_compinit_done:-}" ]]; then
     compinit -C
-    export _terminal_ninja_compinit_done=1
+    typeset -g _terminal_ninja_compinit_done=1
 fi
 
 autoload -Uz up-line-or-beginning-search
