@@ -50,11 +50,15 @@ EOF
       touch "$HOME/.bash_profile"
       touch "$HOME/.profile"
       touch "$HOME/.zshrc"
+      touch "$HOME/.zprofile"
+      touch "$HOME/.zlogin"
 
-        set_managed_block "$HOME/.bashrc" '[ -f "$HOME/.terminal-ninja/terminalninja.bash" ] && . "$HOME/.terminal-ninja/terminalninja.bash"'
-        set_managed_block "$HOME/.bash_profile" '[ -f "$HOME/.terminal-ninja/terminalninja.bash" ] && . "$HOME/.terminal-ninja/terminalninja.bash"'
-        set_managed_block "$HOME/.profile" '[ -f "$HOME/.terminal-ninja/terminalninja.bash" ] && . "$HOME/.terminal-ninja/terminalninja.bash"'
-        set_managed_block "$HOME/.zshrc" '[ -f "$HOME/.terminal-ninja/terminalninja.zsh" ] && . "$HOME/.terminal-ninja/terminalninja.zsh"'
+      set_managed_block "$HOME/.bashrc" '[ -f "$HOME/.terminal-ninja/terminalninja.bash" ] && . "$HOME/.terminal-ninja/terminalninja.bash"'
+      set_managed_block "$HOME/.bash_profile" '[ -f "$HOME/.terminal-ninja/terminalninja.bash" ] && . "$HOME/.terminal-ninja/terminalninja.bash"'
+      set_managed_block "$HOME/.profile" '[ -f "$HOME/.terminal-ninja/terminalninja.bash" ] && . "$HOME/.terminal-ninja/terminalninja.bash"'
+      set_managed_block "$HOME/.zshrc" '[ -f "$HOME/.terminal-ninja/terminalninja.zsh" ] && . "$HOME/.terminal-ninja/terminalninja.zsh"'
+      set_managed_block "$HOME/.zprofile" '[ -f "$HOME/.terminal-ninja/terminalninja.zsh" ] && . "$HOME/.terminal-ninja/terminalninja.zsh"'
+      set_managed_block "$HOME/.zlogin" '[ -f "$HOME/.terminal-ninja/terminalninja.zsh" ] && . "$HOME/.terminal-ninja/terminalninja.zsh"'
 
       pwsh_profile_dir="${XDG_CONFIG_HOME:-$HOME/.config}/powershell"
       mkdir -p "$pwsh_profile_dir"
