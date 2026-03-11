@@ -4,19 +4,33 @@ import hashlib
 import json
 import os
 from pathlib import Path
-from string import Template
 import sys
-from urllib.request import urlopen
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 
 def sha256_for_url(url: str) -> str:
     digest = hashlib.sha256()
-    with urlopen(url) as response:
-        while True:
-            chunk = response.read(1024 * 1024)
-            if not chunk:
-                break
-            digest.update(chunk)
+    request = Request(url, headers={"User-Agent": "terminalninja-release-renderer/1.0"})
+
+    try:
+        with urlopen(request) as response:
+            while True:
+                chunk = response.read(1024 * 1024)
+                if not chunk:
+                    break
+                digest.update(chunk)
+    except HTTPError as error:
+        if error.code == 404:
+            raise RuntimeError(
+                f"Release archive not found: {url}. "
+                "Ensure the tag exists and is pushed. For workflow_dispatch, use an existing tag such as v1.2.3."
+            ) from error
+
+        raise RuntimeError(f"Failed to download release archive {url}: HTTP {error.code}") from error
+    except URLError as error:
+        raise RuntimeError(f"Failed to download release archive {url}: {error.reason}") from error
+
     return digest.hexdigest()
 
 
@@ -89,4 +103,8 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    try:
+        raise SystemExit(main())
+    except RuntimeError as error:
+        print(error, file=sys.stderr)
+        raise SystemExit(1)
