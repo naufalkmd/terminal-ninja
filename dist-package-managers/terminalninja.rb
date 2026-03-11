@@ -12,6 +12,31 @@ class Terminalninja < Formula
       #!/bin/bash
       set -euo pipefail
 
+      set_managed_block() {
+        local target_file="$1"
+        local source_line="$2"
+        local temp_file
+
+        mkdir -p "$(dirname "$target_file")"
+        touch "$target_file"
+        temp_file="$(mktemp)"
+        awk '
+          BEGIN { skip = 0 }
+          /^# >>> TerminalNinja >>>$/ { skip = 1; next }
+          /^# <<< TerminalNinja <<</ { skip = 0; next }
+          skip == 0 { print }
+        ' "$target_file" > "$temp_file"
+        mv "$temp_file" "$target_file"
+        if [ -s "$target_file" ] && [ "$(tail -c 1 "$target_file" 2>/dev/null || true)" != "" ]; then
+          printf '\n' >> "$target_file"
+        fi
+        cat >> "$target_file" <<EOF
+# >>> TerminalNinja >>>
+$source_line
+# <<< TerminalNinja <<<
+EOF
+      }
+
       install_root="$HOME/.terminal-ninja"
       mkdir -p "$install_root"
 
@@ -26,36 +51,10 @@ class Terminalninja < Formula
       touch "$HOME/.profile"
       touch "$HOME/.zshrc"
 
-      python3 - <<'PY'
-from pathlib import Path
-
-marker_start = '# >>> TerminalNinja >>>'
-marker_end = '# <<< TerminalNinja <<<'
-blocks = {
-    Path.home() / '.bashrc': marker_start + '\n[ -f "$HOME/.terminal-ninja/terminalninja.bash" ] && . "$HOME/.terminal-ninja/terminalninja.bash"\n' + marker_end + '\n',
-  Path.home() / '.bash_profile': marker_start + '\n[ -f "$HOME/.terminal-ninja/terminalninja.bash" ] && . "$HOME/.terminal-ninja/terminalninja.bash"\n' + marker_end + '\n',
-  Path.home() / '.profile': marker_start + '\n[ -f "$HOME/.terminal-ninja/terminalninja.bash" ] && . "$HOME/.terminal-ninja/terminalninja.bash"\n' + marker_end + '\n',
-    Path.home() / '.zshrc': marker_start + '\n[ -f "$HOME/.terminal-ninja/terminalninja.zsh" ] && . "$HOME/.terminal-ninja/terminalninja.zsh"\n' + marker_end + '\n',
-}
-
-for path, block in blocks.items():
-    content = path.read_text() if path.exists() else ''
-    while True:
-        start = content.find(marker_start)
-        if start == -1:
-            break
-        end = content.find(marker_end, start)
-        if end == -1:
-            break
-        end += len(marker_end)
-        while end < len(content) and content[end] in '\r\n':
-            end += 1
-        content = content[:start].rstrip('\r\n') + ('\n' if content[:start].strip() else '') + content[end:]
-    if content and not content.endswith('\n'):
-        content += '\n'
-    content += block
-    path.write_text(content)
-PY
+        set_managed_block "$HOME/.bashrc" '[ -f "$HOME/.terminal-ninja/terminalninja.bash" ] && . "$HOME/.terminal-ninja/terminalninja.bash"'
+        set_managed_block "$HOME/.bash_profile" '[ -f "$HOME/.terminal-ninja/terminalninja.bash" ] && . "$HOME/.terminal-ninja/terminalninja.bash"'
+        set_managed_block "$HOME/.profile" '[ -f "$HOME/.terminal-ninja/terminalninja.bash" ] && . "$HOME/.terminal-ninja/terminalninja.bash"'
+        set_managed_block "$HOME/.zshrc" '[ -f "$HOME/.terminal-ninja/terminalninja.zsh" ] && . "$HOME/.terminal-ninja/terminalninja.zsh"'
 
       pwsh_profile_dir="${XDG_CONFIG_HOME:-$HOME/.config}/powershell"
       mkdir -p "$pwsh_profile_dir"
