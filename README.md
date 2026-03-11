@@ -2,6 +2,34 @@
 
 TerminalNinja is a cross-shell terminal setup that applies a shared Starship prompt plus shell-native quality-of-life features across PowerShell, bash, zsh, and WSL.
 
+## Quick Start
+
+Recommended install paths:
+
+- Windows: Scoop
+- macOS and Linux: Homebrew
+- Local repo checkout: `setup-everywhere.ps1`
+
+Windows with Scoop:
+
+```powershell
+scoop bucket add naufalkmd https://github.com/naufalkmd/scoop-bucket
+scoop install terminalninja
+```
+
+macOS or Linux with Homebrew:
+
+```bash
+brew tap naufalkmd/tap
+brew install terminalninja
+```
+
+If you are running from a local checkout instead of a package manager:
+
+```powershell
+.\setup-everywhere.ps1 -InstallWslStarship
+```
+
 ## Description
 
 TerminalNinja installs a managed shell config under `~/.terminal-ninja` and wires your shell startup files to source it. That keeps the visuals consistent everywhere while letting each shell use the features it supports best.
@@ -46,7 +74,37 @@ This repository provides:
 
 ## Installation
 
-### Recommended: Chocolatey
+### Recommended package managers
+
+#### Windows: Scoop
+
+```powershell
+scoop bucket add naufalkmd https://github.com/naufalkmd/scoop-bucket
+scoop install terminalninja
+```
+
+Why Scoop is recommended on Windows:
+
+- Simple user-scoped install
+- Good fit for PowerShell-first tooling
+- Works cleanly with Starship and TerminalNinja updates
+
+#### macOS and Linux: Homebrew
+
+```bash
+brew tap naufalkmd/tap
+brew install terminalninja
+```
+
+Why Homebrew is recommended on macOS and Linux:
+
+- Familiar install path for shell tools
+- Easy upgrades through `brew upgrade`
+- Clean integration with the packaged `terminalninja-install` flow
+
+After install, restart PowerShell, bash, zsh, and any WSL sessions.
+
+### Alternative: Chocolatey
 
 1. Install Starship in every environment where you want the TerminalNinja prompt to render, or let the installer do it automatically.
 2. Install the package:
@@ -63,7 +121,7 @@ What the installer does:
 - Detects WSL distros and adds the same managed block to Linux `~/.bashrc` and `~/.zshrc`
 - Leaves the rest of your profile content intact
 
-### Automated local setup and verification
+### Local setup from this repository
 
 If you want the repo to do the full local setup for you, including optional WSL `starship` installation and a post-install verification pass, run:
 
