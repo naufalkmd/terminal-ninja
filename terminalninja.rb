@@ -8,7 +8,7 @@ class Terminalninja < Formula
   def install
     libexec.install "terminalninja.ps1", "terminalninja.bash", "terminalninja.zsh", "starship.toml"
 
-    (bin/"terminalninja-install").write <<~EOS
+    (libexec/"terminalninja-install").write <<~EOS
       #!/bin/bash
       set -euo pipefail
 
@@ -223,7 +223,8 @@ EOF
       echo "Restart your shell sessions to apply the changes."
     EOS
 
-    chmod 0755, bin/"terminalninja-install"
+    chmod 0755, libexec/"terminalninja-install"
+    bin.install_symlink libexec/"terminalninja-install"
   end
 
   def caveats
@@ -244,7 +245,8 @@ EOF
 
   test do
     assert_predicate bin/"terminalninja-install", :exist?
-    assert_match "terminalninja.ps1", (bin/"terminalninja-install").read
+    assert_predicate bin/"terminalninja-install", :executable?
+    assert_match "terminalninja.ps1", (libexec/"terminalninja-install").read
   end
 end
 
