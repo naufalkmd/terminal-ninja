@@ -6,22 +6,22 @@
     <title>TerminalNinja 🥷</title>
     <authors>naufalkmd</authors>
     <owners>naufalkmd</owners>
-    <licenseUrl>https://github.com/naufalkmd/enhanced-powershell-profile/blob/main/LICENSE</licenseUrl>
-    <projectUrl>https://github.com/naufalkmd/enhanced-powershell-profile</projectUrl>
+    <licenseUrl>https://github.com/naufalkmd/terminal-ninja/blob/main/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/naufalkmd/terminal-ninja</projectUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>
-      TerminalNinja - Master your terminal with lightning-fast auto-suggestions and ninja-level command completions.
+      TerminalNinja - Apply one terminal identity across PowerShell, bash, zsh, and WSL.
       
       Features:
-      - PSReadLine 2.4.5+ with predictive IntelliSense
-      - Command completions for Git, NPM, Docker, Chocolatey, Homebrew
-      - Auto-correct for common typos
-      - Oh My Posh theme integration
-      - Custom aliases and functions
+      - Shared Starship prompt across shells
+      - PowerShell PSReadLine with predictive IntelliSense
+      - bash/zsh history, completion, aliases, and helper functions
+      - Automatic profile wiring for Windows and WSL startup files
+      - Managed install under ~/.terminal-ninja
     </description>
-    <summary>TerminalNinja - Master your PowerShell terminal like a ninja</summary>
-    <releaseNotes>Initial release with full auto-completion support</releaseNotes>
-    <tags>powershell profile terminal oh-my-posh psreadline autocomplete git</tags>
+    <summary>TerminalNinja - One prompt and workflow across PowerShell, bash, zsh, and WSL</summary>
+    <releaseNotes>Use Starship as the shared prompt layer across PowerShell, bash, zsh, and WSL</releaseNotes>
+    <tags>powershell bash zsh wsl profile terminal starship psreadline autocomplete git</tags>
   </metadata>
   <files>
     <file src="tools\**" target="tools" />

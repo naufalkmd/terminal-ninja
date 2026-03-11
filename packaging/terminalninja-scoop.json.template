@@ -1,0 +1,30 @@
+{
+  "version": "__VERSION__",
+  "description": "Shared Starship prompt and shell-native terminal workflow across PowerShell, bash, zsh, and WSL",
+  "homepage": "https://github.com/__OWNER__/__REPO__",
+  "license": "MIT",
+  "url": "__ZIP_URL__",
+  "hash": "__ZIP_SHA256__",
+  "extract_dir": "__REPO__-__VERSION__",
+  "depends": "starship",
+  "suggest": {
+    "PowerShell": "powershell-core"
+  },
+  "installer": {
+    "script": [
+      "& pwsh -NoProfile -ExecutionPolicy Bypass -File \"$dir\\tools\\chocolateyinstall.ps1\" -Targets powershell,bash,zsh,cmd"
+    ]
+  },
+  "uninstaller": {
+    "script": [
+      "& pwsh -NoProfile -ExecutionPolicy Bypass -File \"$dir\\tools\\chocolateyuninstall.ps1\""
+    ]
+  },
+  "checkver": {
+    "github": "https://github.com/__OWNER__/__REPO__"
+  },
+  "autoupdate": {
+    "url": "https://github.com/__OWNER__/__REPO__/archive/refs/tags/v$version.zip",
+    "extract_dir": "__REPO__-$version"
+  }
+}

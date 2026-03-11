@@ -1,8 +1,8 @@
 class Terminalninja < Formula
   desc "Shared Starship prompt and shell-native terminal workflow across PowerShell, bash, zsh, and WSL"
-  homepage "https://github.com/naufalkmd/terminal-ninja"
-  url "https://github.com/naufalkmd/terminal-ninja/archive/refs/tags/v1.0.0.tar.gz"
-  sha256 "92dd24a05c350f315fa09904d105192d6cf7fe98f1ec6039f19e4acdf63d9566"
+  homepage "https://github.com/__OWNER__/__REPO__"
+  url "__TARBALL_URL__"
+  sha256 "__TARBALL_SHA256__"
   license "MIT"
 
   depends_on "powershell"
@@ -85,4 +85,3 @@ EOF
     assert_match "terminalninja.ps1", (bin/"terminalninja-install").read
   end
 end
-

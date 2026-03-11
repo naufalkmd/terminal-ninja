@@ -1,0 +1,129 @@
+format = """
+[](pine)$os[](fg:pine bg:forest)$shell[](fg:forest bg:moss)$hostname[](fg:moss bg:rose)$username$directory[](fg:rose bg:orange)$git_branch$git_status[](fg:orange bg:slate)$cmd_duration[](fg:slate bg:blue)$time[](fg:blue)
+$character
+"""
+
+add_newline = true
+command_timeout = 1000
+palette = "terminalninja"
+
+[palettes.terminalninja]
+teal = "#003543"
+pine = "#0c2417"
+forest = "#153622"
+moss = "#1d4a2e"
+fern = "#27603b"
+mint = "#00c983"
+rose = "#DA627D"
+orange = "#FCA17D"
+slate = "#83769c"
+blue = "#33658A"
+cyan = "#45F1C2"
+red = "#ff4d4d"
+white = "#ffffff"
+
+[os]
+disabled = false
+style = "bg:pine fg:mint"
+format = "[ $symbol ]($style)"
+
+[shell]
+disabled = false
+style = "bg:forest fg:white"
+format = "[ $indicator ]($style)"
+bash_indicator = "bash"
+cmd_indicator = "cmd"
+fish_indicator = "fish"
+ion_indicator = "ion"
+nu_indicator = "nushell"
+powershell_indicator = "PowerShell"
+tcsh_indicator = "tcsh"
+xonsh_indicator = "xonsh"
+zsh_indicator = "zsh"
+unknown_indicator = "shell"
+
+[os.symbols]
+Alpine = "Alpine"
+Amazon = "Amazon"
+Android = "Android"
+Arch = "Arch"
+Artix = "Artix"
+CentOS = "CentOS"
+Debian = "Debian"
+DragonFly = "DragonFly"
+Emscripten = "Emscripten"
+EndeavourOS = "EndeavourOS"
+Fedora = "Fedora"
+FreeBSD = "FreeBSD"
+Garuda = "Garuda"
+Gentoo = "Gentoo"
+HardenedBSD = "HardenedBSD"
+Illumos = "Illumos"
+Linux = "Linux"
+Mabox = "Mabox"
+Macos = "macOS"
+Manjaro = "Manjaro"
+Mariner = "Mariner"
+MidnightBSD = "MidnightBSD"
+Mint = "Mint"
+NetBSD = "NetBSD"
+NixOS = "NixOS"
+OpenBSD = "OpenBSD"
+openSUSE = "openSUSE"
+OracleLinux = "OracleLinux"
+Pop = "Pop!_OS"
+Raspbian = "Raspbian"
+Redhat = "RedHat"
+RedHatEnterprise = "RHEL"
+RockyLinux = "RockyLinux"
+Redox = "Redox"
+Solus = "Solus"
+SUSE = "SUSE"
+Ubuntu = "Ubuntu"
+Unknown = "Unknown"
+Void = "Void"
+Windows = "Windows"
+
+[hostname]
+ssh_only = false
+style = "bg:moss fg:mint"
+format = "[$hostname ]($style)"
+
+[username]
+show_always = true
+style_user = "fg:white bg:rose"
+style_root = "fg:white bg:red"
+format = "[$user]($style)"
+
+[directory]
+style = "fg:white bg:rose"
+read_only = " 󰌾"
+format = "[ 󰉋 $path$read_only ]($style)"
+truncation_length = 4
+truncation_symbol = "…/"
+home_symbol = "~"
+
+[git_branch]
+symbol = ""
+style = "fg:white bg:orange"
+format = "[ $symbol $branch ]($style)"
+
+[git_status]
+style = "fg:white bg:orange"
+format = "[($all_status$ahead_behind )]($style)"
+
+[cmd_duration]
+min_time = 500
+style = "fg:white bg:slate"
+format = "[ 󱎫 $duration ]($style)"
+
+[time]
+disabled = false
+time_format = "%I:%M %p"
+style = "fg:white bg:blue"
+format = "[  $time ]($style)"
+
+[character]
+success_symbol = "[⚡❯❯](#45F1C2)"
+error_symbol = "[⚡❯❯](#ff4d4d)"
+vimcmd_symbol = "[❮❮](#45F1C2)"

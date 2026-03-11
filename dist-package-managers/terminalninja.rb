@@ -85,4 +85,3 @@ EOF
     assert_match "terminalninja.ps1", (bin/"terminalninja-install").read
   end
 end
-

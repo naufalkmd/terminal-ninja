@@ -1,0 +1,30 @@
+{
+  "version": "1.0.0",
+  "description": "Shared Starship prompt and shell-native terminal workflow across PowerShell, bash, zsh, and WSL",
+  "homepage": "https://github.com/naufalkmd/terminal-ninja",
+  "license": "MIT",
+  "url": "https://github.com/naufalkmd/terminal-ninja/archive/refs/tags/v1.0.0.zip",
+  "hash": "5bf5bdea31e8e654c5148d643c2d7956af343d7f4a53b146587fd9ea7171ee85",
+  "extract_dir": "terminal-ninja-1.0.0",
+  "depends": "starship",
+  "suggest": {
+    "PowerShell": "powershell-core"
+  },
+  "installer": {
+    "script": [
+      "& pwsh -NoProfile -ExecutionPolicy Bypass -File \"$dir\\tools\\chocolateyinstall.ps1\" -Targets powershell,bash,zsh,cmd"
+    ]
+  },
+  "uninstaller": {
+    "script": [
+      "& pwsh -NoProfile -ExecutionPolicy Bypass -File \"$dir\\tools\\chocolateyuninstall.ps1\""
+    ]
+  },
+  "checkver": {
+    "github": "https://github.com/naufalkmd/terminal-ninja"
+  },
+  "autoupdate": {
+    "url": "https://github.com/naufalkmd/terminal-ninja/archive/refs/tags/v$version.zip",
+    "extract_dir": "terminal-ninja-$version"
+  }
+}
