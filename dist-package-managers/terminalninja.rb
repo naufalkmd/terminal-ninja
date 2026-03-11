@@ -70,16 +70,18 @@ EOF
     chmod 0755, bin/"terminalninja-install"
   end
 
-  caveats <<~EOS
-    Run the installer once after brew install:
-      terminalninja-install
+  def caveats
+    <<~EOS
+      Run the installer once after brew install:
+        terminalninja-install
 
-    This copies TerminalNinja assets into ~/.terminal-ninja and wires bash, zsh,
-    and PowerShell startup files to source them.
+      This copies TerminalNinja assets into ~/.terminal-ninja and wires bash, zsh,
+      and PowerShell startup files to source them.
 
-    If you want TerminalNinja inside PowerShell on macOS or Linux, install
-    PowerShell separately and then start pwsh after running terminalninja-install.
-  EOS
+      If you want TerminalNinja inside PowerShell on macOS or Linux, install
+      PowerShell separately and then start pwsh after running terminalninja-install.
+    EOS
+  end
 
   test do
     assert_predicate bin/"terminalninja-install", :exist?
