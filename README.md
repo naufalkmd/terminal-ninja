@@ -24,6 +24,7 @@ macOS or Linux with Homebrew:
 ```bash
 brew tap naufalkmd/tap
 brew install terminalninja
+terminalninja-install
 ```
 
 If you are running from a local checkout instead of a package manager:
@@ -96,6 +97,7 @@ Why Scoop is recommended on Windows:
 ```bash
 brew tap naufalkmd/tap
 brew install terminalninja
+terminalninja-install
 ```
 
 Why Homebrew is recommended on macOS and Linux:
@@ -105,7 +107,7 @@ Why Homebrew is recommended on macOS and Linux:
 - Clean integration with the packaged `terminalninja-install` flow
 - Does not require PowerShell just to install TerminalNinja for bash or zsh
 
-After install, restart PowerShell, bash, zsh, and any WSL sessions.
+After install, run `terminalninja-install`, then restart PowerShell, bash, zsh, and any WSL sessions.
 
 If you also use PowerShell on macOS or Linux, install PowerShell separately, then run `pwsh` after `terminalninja-install` has written the profile file.
 

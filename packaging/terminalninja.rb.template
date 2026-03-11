@@ -19,6 +19,7 @@ class Terminalninja < Formula
       cp "#{libexec}/terminalninja.bash" "$install_root/terminalninja.bash"
       cp "#{libexec}/terminalninja.zsh" "$install_root/terminalninja.zsh"
       cp "#{libexec}/starship.toml" "$install_root/starship.toml"
+      chmod 0644 "$install_root/terminalninja.ps1" "$install_root/terminalninja.bash" "$install_root/terminalninja.zsh" "$install_root/starship.toml"
 
       touch "$HOME/.bashrc"
       touch "$HOME/.zshrc"
