@@ -13,6 +13,14 @@ if (-not $starship) {
 
 if ($starship -and (Test-Path $env:STARSHIP_CONFIG)) {
     & $starship.Source init powershell | Out-String | Invoke-Expression
+
+    if (Get-Command Set-PSReadLineOption -ErrorAction SilentlyContinue) {
+        Set-PSReadLineOption -ContinuationPrompt '>> '
+    }
+
+    function global:Invoke-Starship-TransientFunction {
+        '> '
+    }
 } else {
     Write-Host 'Starship not found in PATH. Prompt will use the default shell prompt.' -ForegroundColor Yellow
 }
