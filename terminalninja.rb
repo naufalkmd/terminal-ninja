@@ -56,6 +56,19 @@ class Terminalninja < Formula
         done
       }
 
+      selected_target_exists() {
+        local wanted="$1"
+        local selected
+
+        for selected in "${selected_targets[@]:-}"; do
+          if [ "$selected" = "$wanted" ]; then
+            return 0
+          fi
+        done
+
+        return 1
+      }
+
       select_targets_interactively() {
         local supported_ids=()
         local index selection token trimmed parsed_index
@@ -106,7 +119,7 @@ class Terminalninja < Formula
             echo "Skipping unsupported target: ${detected_labels[$parsed_index]}" >&2
             continue
           fi
-          if [[ " ${selected_targets[*]} " != *" ${detected_ids[$parsed_index]} "* ]]; then
+          if ! selected_target_exists "${detected_ids[$parsed_index]}"; then
             selected_targets+=("${detected_ids[$parsed_index]}")
           fi
         done
