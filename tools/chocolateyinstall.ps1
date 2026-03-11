@@ -6,11 +6,13 @@ $ErrorActionPreference = 'Stop'
 
 $toolsDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $installRoot = Join-Path $HOME '.terminal-ninja'
+$statePath = Join-Path $installRoot 'install-state.json'
 $clinkScriptsDir = Join-Path $env:LocalAppData 'clink'
 $cmdScriptPath = Join-Path $clinkScriptsDir 'terminalninja.lua'
 $timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'
 $markerStart = '# >>> TerminalNinja >>>'
 $markerEnd = '# <<< TerminalNinja <<<'
+$managedVsCodeFontFamily = 'FiraCode Nerd Font'
 $backups = [System.Collections.Generic.List[string]]::new()
 
 if ((-not $Targets -or $Targets.Count -eq 0) -and $env:TERMINALNINJA_TARGETS) {
@@ -150,6 +152,63 @@ function Backup-File {
     $backups.Add($backupPath)
 }
 
+function Get-StateProperty {
+    param(
+        [object]$Object,
+        [string]$Name
+    )
+
+    if ($null -eq $Object) {
+        return $null
+    }
+
+    $property = $Object.PSObject.Properties[$Name]
+    if ($property) {
+        return $property.Value
+    }
+
+    return $null
+}
+
+function Set-StateProperty {
+    param(
+        [object]$Object,
+        [string]$Name,
+        $Value
+    )
+
+    if ($Object.PSObject.Properties[$Name]) {
+        $Object.$Name = $Value
+        return
+    }
+
+    $Object | Add-Member -MemberType NoteProperty -Name $Name -Value $Value
+}
+
+function Get-InstallState {
+    if (-not (Test-Path $statePath)) {
+        return [pscustomobject]@{}
+    }
+
+    try {
+        $raw = Get-Content -Path $statePath -Raw -ErrorAction SilentlyContinue
+        if ([string]::IsNullOrWhiteSpace($raw)) {
+            return [pscustomobject]@{}
+        }
+
+        return $raw | ConvertFrom-Json
+    } catch {
+        Write-Warning "Unable to read TerminalNinja install state at '$statePath': $_"
+        return [pscustomobject]@{}
+    }
+}
+
+function Save-InstallState {
+    param([object]$State)
+
+    $State | ConvertTo-Json -Depth 10 | Set-Content -Path $statePath
+}
+
 function Ensure-ParentDirectory {
     param([string]$Path)
 
@@ -157,6 +216,50 @@ function Ensure-ParentDirectory {
     if ($parent -and -not (Test-Path $parent)) {
         New-Item -ItemType Directory -Path $parent -Force | Out-Null
     }
+}
+
+function Set-VSCodeTerminalFontFamily {
+    param([object]$State)
+
+    if (-not $env:APPDATA) {
+        return
+    }
+
+    $settingsPath = Join-Path $env:APPDATA 'Code\User\settings.json'
+    if (-not (Test-Path $settingsPath)) {
+        return
+    }
+
+    try {
+        $raw = Get-Content -Path $settingsPath -Raw -ErrorAction SilentlyContinue
+        if ([string]::IsNullOrWhiteSpace($raw)) {
+            $settings = [pscustomobject]@{}
+        } else {
+            $settings = $raw | ConvertFrom-Json
+        }
+    } catch {
+        Write-Warning "Unable to update VS Code terminal font setting: $_"
+        return
+    }
+
+    $fontFamilyProperty = $settings.PSObject.Properties['terminal.integrated.fontFamily']
+    $currentFontFamily = if ($fontFamilyProperty) { [string]$fontFamilyProperty.Value } else { $null }
+
+    if (-not [bool](Get-StateProperty -Object $State -Name 'VSCodeTerminalFontFamilyManaged')) {
+        Set-StateProperty -Object $State -Name 'VSCodeTerminalFontFamilyManaged' -Value $true
+        Set-StateProperty -Object $State -Name 'VSCodeTerminalFontFamilyManagedValue' -Value $managedVsCodeFontFamily
+        Set-StateProperty -Object $State -Name 'VSCodeTerminalFontFamilyHadValue' -Value ([bool]$fontFamilyProperty)
+        Set-StateProperty -Object $State -Name 'VSCodeTerminalFontFamilyOriginalValue' -Value $currentFontFamily
+        Set-StateProperty -Object $State -Name 'VSCodeSettingsPath' -Value $settingsPath
+    }
+
+    if ($currentFontFamily -eq $managedVsCodeFontFamily) {
+        return
+    }
+
+    $settings | Add-Member -MemberType NoteProperty -Name 'terminal.integrated.fontFamily' -Value $managedVsCodeFontFamily -Force
+    $settings | ConvertTo-Json -Depth 100 | Set-Content -Path $settingsPath
+    Write-Host 'Configured VS Code terminal font for TerminalNinja.' -ForegroundColor Green
 }
 
 function Set-ManagedBlock {
@@ -279,6 +382,7 @@ function Set-WslManagedBlock {
 }
 
 New-Item -ItemType Directory -Path $installRoot -Force | Out-Null
+$installState = Get-InstallState
 
 $assets = @(
     'terminalninja.ps1',
@@ -293,6 +397,11 @@ foreach ($asset in $assets) {
     if (Test-Path $source) {
         Copy-Item $source (Join-Path $installRoot $asset) -Force
     }
+}
+
+$uninstallSource = Join-Path $toolsDir 'chocolateyuninstall.ps1'
+if (Test-Path $uninstallSource) {
+    Copy-Item $uninstallSource (Join-Path $installRoot 'terminalninja-uninstall.ps1') -Force
 }
 
 if ((Test-TargetSelected 'powershell') -or (Test-TargetSelected 'bash') -or (Test-TargetSelected 'zsh')) {
@@ -341,6 +450,12 @@ if (Test-TargetSelected 'zsh') {
 if (Test-TargetSelected 'cmd') {
     Set-CmdManagedScript -Path $cmdScriptPath
 }
+
+if ((Test-TargetSelected 'powershell') -or (Test-TargetSelected 'bash') -or (Test-TargetSelected 'zsh') -or (Test-TargetSelected 'cmd')) {
+    Set-VSCodeTerminalFontFamily -State $installState
+}
+
+Save-InstallState -State $installState
 
 Write-Host 'Checking PSReadLine version...' -ForegroundColor Cyan
 $psReadLine = Get-Module -Name PSReadLine -ListAvailable | Sort-Object Version -Descending | Select-Object -First 1
@@ -398,6 +513,7 @@ foreach ($distro in $wslDistros) {
 Write-Host "`nNotes:" -ForegroundColor Cyan
 Write-Host '  - Starship provides the shared prompt visuals across shells.' -ForegroundColor White
 Write-Host '  - Shared aliases and helper functions are sourced from ~/.terminal-ninja.' -ForegroundColor White
+Write-Host '  - To remove TerminalNinja later, run ~/.terminal-ninja/terminalninja-uninstall.ps1.' -ForegroundColor White
 
 if ($backups.Count -gt 0) {
     Write-Host "`nBackups created:" -ForegroundColor Yellow

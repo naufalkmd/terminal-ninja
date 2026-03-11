@@ -44,20 +44,6 @@ if (-not (Test-Path $fontInstalledMarker)) {
     }
 }
 
-# Auto-configure VS Code terminal to use FiraCode Nerd Font
-$settingsPath = "$env:APPDATA\Code\User\settings.json"
-if (Test-Path $settingsPath) {
-    try {
-        $settings = Get-Content $settingsPath -Raw | ConvertFrom-Json
-
-        if ($settings.'terminal.integrated.fontFamily' -ne "FiraCode Nerd Font") {
-            $settings | Add-Member -MemberType NoteProperty -Name "terminal.integrated.fontFamily" -Value "FiraCode Nerd Font" -Force
-            $settings | ConvertTo-Json -Depth 100 | Set-Content $settingsPath
-        }
-    } catch {
-    }
-}
-
 # ============ PSReadLine Configuration ============
 $PSReadLineOptions = @{
     HistorySearchCursorMovesToEnd = $true

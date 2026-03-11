@@ -1,6 +1,7 @@
 param(
     [Alias('InstallWslOhMyPosh')]
     [switch]$InstallWslStarship,
+    [switch]$Uninstall,
     [switch]$VerifyOnly,
     [switch]$SkipVerification,
     [switch]$UseChocolatey,
@@ -11,9 +12,18 @@ $ErrorActionPreference = 'Stop'
 
 $repoRoot = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $installerPath = Join-Path $repoRoot 'tools\chocolateyinstall.ps1'
+$uninstallerPath = Join-Path $repoRoot 'tools\chocolateyuninstall.ps1'
 $markerStart = '# >>> TerminalNinja >>>'
 $installRoot = Join-Path $HOME '.terminal-ninja'
 $cmdScriptPath = Join-Path (Join-Path $env:LocalAppData 'clink') 'terminalninja.lua'
+
+if ($Uninstall -and $VerifyOnly) {
+    throw 'The -Uninstall and -VerifyOnly switches cannot be used together.'
+}
+
+if ($Uninstall -and $InstallWslStarship) {
+    throw 'The -Uninstall and -InstallWslStarship switches cannot be used together.'
+}
 
 function Get-WslDistros {
     if (-not (Get-Command wsl.exe -ErrorAction SilentlyContinue)) {
@@ -279,6 +289,30 @@ function Get-CmdVerification {
         PromptBinary = [bool]($starship -and $clink)
         Details = if (-not $clink) { 'Clink not found in Windows PATH or standard install locations' } elseif (-not $starship) { 'starship not found in Windows PATH' } else { $cmdScriptPath }
     }
+}
+
+if ($Uninstall) {
+    if ($UseChocolatey) {
+        if (-not (Get-Command choco -ErrorAction SilentlyContinue)) {
+            throw 'Chocolatey is not installed. Re-run without -UseChocolatey to use the local uninstaller script.'
+        }
+
+        Write-Host 'Running Chocolatey package uninstall...' -ForegroundColor Cyan
+        choco uninstall terminalninja -y
+
+        if ($LASTEXITCODE -ne 0) {
+            throw "Chocolatey uninstall failed with exit code $LASTEXITCODE"
+        }
+    } else {
+        if (-not (Test-Path $uninstallerPath)) {
+            throw "TerminalNinja uninstaller not found at '$uninstallerPath'."
+        }
+
+        Write-Host 'Running local TerminalNinja uninstaller...' -ForegroundColor Cyan
+        & $uninstallerPath
+    }
+
+    return
 }
 
 $detectedTargets = @(Get-DetectedTargets)

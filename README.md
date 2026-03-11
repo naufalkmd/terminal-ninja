@@ -27,6 +27,13 @@ brew install terminalninja
 terminalninja-install
 ```
 
+To remove it later and reset the managed shell config:
+
+```bash
+~/.terminal-ninja/terminalninja-uninstall
+brew uninstall terminalninja
+```
+
 If you are running from a local checkout instead of a package manager:
 
 ```powershell
@@ -128,6 +135,27 @@ What the installer does:
 - Detects WSL distros and adds the same managed block to Linux `~/.bashrc` and `~/.zshrc`
 - Leaves the rest of your profile content intact
 
+### Uninstall and reset
+
+Windows package-manager uninstalls now remove the managed profile blocks, delete `~/.terminal-ninja`, and restore VS Code's `terminal.integrated.fontFamily` if TerminalNinja set it during install.
+
+Use these commands:
+
+```powershell
+scoop uninstall terminalninja
+# or
+choco uninstall terminalninja
+```
+
+For Homebrew, run the persisted uninstaller first, then remove the formula:
+
+```bash
+~/.terminal-ninja/terminalninja-uninstall
+brew uninstall terminalninja
+```
+
+While the formula is still installed, the same helper is also on your `PATH` as `terminalninja-uninstall`.
+
 ### Local setup from this repository
 
 If you want the repo to do the full local setup for you, including optional WSL `starship` installation and a post-install verification pass, run:
@@ -141,6 +169,7 @@ Useful modes:
 - `./setup-everywhere.ps1 -VerifyOnly`: verify managed blocks and prompt dependencies without reinstalling
 - `./setup-everywhere.ps1 -SkipVerification`: install without the verification pass
 - `./setup-everywhere.ps1 -UseChocolatey -InstallWslStarship`: use the Chocolatey package path instead of the local installer script
+- `./setup-everywhere.ps1 -Uninstall`: remove TerminalNinja and restore managed settings from a local repo checkout
 
 ### Manual install
 
