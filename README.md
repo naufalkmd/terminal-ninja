@@ -107,7 +107,7 @@ Why Homebrew is recommended on macOS and Linux:
 - Clean integration with the packaged `terminalninja-install` flow
 - Does not require PowerShell just to install TerminalNinja for bash or zsh
 
-After install, run `terminalninja-install`, then restart PowerShell, bash, zsh, and any WSL sessions.
+After install, run `terminalninja-install`, then restart PowerShell, bash, zsh, and any WSL sessions. On macOS bash, TerminalNinja is wired into `~/.bash_profile` and `~/.profile` as well as `~/.bashrc` because Terminal.app commonly starts bash as a login shell.
 
 If you also use PowerShell on macOS or Linux, install PowerShell separately, then run `pwsh` after `terminalninja-install` has written the profile file.
 

@@ -216,6 +216,25 @@ function Convert-ToWslPath {
     throw "Unsupported Windows path for WSL conversion: $WindowsPath"
 }
 
+function Install-WslAssets {
+    param(
+        [string]$Distro,
+        [string]$WindowsInstallRoot
+    )
+
+    $wslInstallRoot = Convert-ToWslPath -WindowsPath $WindowsInstallRoot
+    $script = @(
+        'install_root="$HOME/.terminal-ninja"',
+        'mkdir -p "$install_root"',
+        ('cp "' + $wslInstallRoot + '/terminalninja.bash" "$install_root/terminalninja.bash"'),
+        ('cp "' + $wslInstallRoot + '/terminalninja.zsh" "$install_root/terminalninja.zsh"'),
+        ('cp "' + $wslInstallRoot + '/starship.toml" "$install_root/starship.toml"'),
+        'chmod 0644 "$install_root/terminalninja.bash" "$install_root/terminalninja.zsh" "$install_root/starship.toml"'
+    ) -join "`n"
+
+    & wsl.exe -d $Distro sh -lc $script | Out-Null
+}
+
 function Get-WslDistros {
     if (-not (Get-Command wsl.exe -ErrorAction SilentlyContinue)) {
         return @()
@@ -336,15 +355,15 @@ if (-not $psReadLine -or $psReadLine.Version -lt [Version]'2.1.0') {
 
 $wslDistros = Get-WslDistros
 if ($wslDistros.Count -gt 0) {
-    $wslInstallRoot = Convert-ToWslPath -WindowsPath $installRoot
     foreach ($distro in $wslDistros) {
         if (-not (Test-TargetSelected ("wsl:$distro"))) {
             continue
         }
 
         try {
-            Set-WslManagedBlock -Distro $distro -TargetFile '~/.bashrc' -SourceFile "$wslInstallRoot/terminalninja.bash"
-            Set-WslManagedBlock -Distro $distro -TargetFile '~/.zshrc' -SourceFile "$wslInstallRoot/terminalninja.zsh"
+            Install-WslAssets -Distro $distro -WindowsInstallRoot $installRoot
+            Set-WslManagedBlock -Distro $distro -TargetFile '~/.bashrc' -SourceFile '$HOME/.terminal-ninja/terminalninja.bash'
+            Set-WslManagedBlock -Distro $distro -TargetFile '~/.zshrc' -SourceFile '$HOME/.terminal-ninja/terminalninja.zsh'
             Write-Host "Configured WSL distro: $distro" -ForegroundColor Green
         } catch {
             Write-Warning "Failed to configure WSL distro '$distro': $_"

@@ -257,11 +257,12 @@ function Get-WslVerification {
     $zshBlockExit = Invoke-WslShell -Distro $Distro -Command "grep -q '# >>> TerminalNinja >>>' ~/.zshrc 2>/dev/null"
     $starshipPath = & wsl.exe -d $Distro sh -lc 'PATH="$HOME/.local/bin:$PATH"; command -v starship 2>/dev/null || true'
     $starshipPath = ($starshipPath | Out-String).Trim()
+    $wslSharedConfigExit = Invoke-WslShell -Distro $Distro -Command '[ -f "$HOME/.terminal-ninja/terminalninja.bash" ] && [ -f "$HOME/.terminal-ninja/terminalninja.zsh" ] && [ -f "$HOME/.terminal-ninja/starship.toml" ]'
 
     [pscustomobject]@{
         Shell = "WSL:$Distro"
         ManagedBlock = ($bashBlockExit -eq 0 -or $zshBlockExit -eq 0)
-        SharedConfig = (Test-Path (Join-Path $installRoot 'terminalninja.bash')) -and (Test-Path (Join-Path $installRoot 'terminalninja.zsh')) -and (Test-Path (Join-Path $installRoot 'starship.toml'))
+        SharedConfig = ($wslSharedConfigExit -eq 0)
         PromptBinary = [bool]$starshipPath
         Details = if ($starshipPath) { $starshipPath } else { 'starship not found in distro PATH' }
     }

@@ -22,6 +22,8 @@ class Terminalninja < Formula
       chmod 0644 "$install_root/terminalninja.ps1" "$install_root/terminalninja.bash" "$install_root/terminalninja.zsh" "$install_root/starship.toml"
 
       touch "$HOME/.bashrc"
+      touch "$HOME/.bash_profile"
+      touch "$HOME/.profile"
       touch "$HOME/.zshrc"
 
       python3 - <<'PY'
@@ -31,6 +33,8 @@ marker_start = '# >>> TerminalNinja >>>'
 marker_end = '# <<< TerminalNinja <<<'
 blocks = {
     Path.home() / '.bashrc': marker_start + '\n[ -f "$HOME/.terminal-ninja/terminalninja.bash" ] && . "$HOME/.terminal-ninja/terminalninja.bash"\n' + marker_end + '\n',
+  Path.home() / '.bash_profile': marker_start + '\n[ -f "$HOME/.terminal-ninja/terminalninja.bash" ] && . "$HOME/.terminal-ninja/terminalninja.bash"\n' + marker_end + '\n',
+  Path.home() / '.profile': marker_start + '\n[ -f "$HOME/.terminal-ninja/terminalninja.bash" ] && . "$HOME/.terminal-ninja/terminalninja.bash"\n' + marker_end + '\n',
     Path.home() / '.zshrc': marker_start + '\n[ -f "$HOME/.terminal-ninja/terminalninja.zsh" ] && . "$HOME/.terminal-ninja/terminalninja.zsh"\n' + marker_end + '\n',
 }
 
