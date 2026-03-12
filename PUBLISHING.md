@@ -45,10 +45,15 @@ This token must be able to push to the external Homebrew tap and Scoop bucket re
 
 - `HOMEBREW_FORMULA_PATH`
   - Default: `Formula/terminalninja.rb`
+- `HOMEBREW_TAP_BRANCH`
+  - Default: the remote repository's default branch
 - `SCOOP_MANIFEST_PATH`
   - Default: `bucket/terminalninja.json`
+- `SCOOP_BUCKET_BRANCH`
+  - Default: the remote repository's default branch
 
 If a target repository variable or the shared token is missing, that publish job is skipped and the workflow still completes the render stage.
+If branch autodetection is unreliable in your external repository, set the optional branch variable explicitly.
 
 ## Release Flow
 

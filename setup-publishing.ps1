@@ -26,7 +26,9 @@ Write-Host '  HOMEBREW_TAP_REPO' -ForegroundColor Gray
 Write-Host '  SCOOP_BUCKET_REPO' -ForegroundColor Gray
 Write-Host 'Optional repository variables:' -ForegroundColor White
 Write-Host '  HOMEBREW_FORMULA_PATH (default: Formula/terminalninja.rb)' -ForegroundColor Gray
+Write-Host '  HOMEBREW_TAP_BRANCH (default: remote default branch)' -ForegroundColor Gray
 Write-Host '  SCOOP_MANIFEST_PATH (default: bucket/terminalninja.json)' -ForegroundColor Gray
+Write-Host '  SCOOP_BUCKET_BRANCH (default: remote default branch)' -ForegroundColor Gray
 
 if ($ShowConfigOnly) {
     Write-Host "`nNo files rendered. Use -RenderAssets with a release tag to generate local publishing artifacts." -ForegroundColor Green

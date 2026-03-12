@@ -206,6 +206,7 @@ jobs:
         shell: bash
         env:
           HOMEBREW_TAP_REPO: ${{ vars.HOMEBREW_TAP_REPO }}
+          HOMEBREW_TAP_BRANCH: ${{ vars.HOMEBREW_TAP_BRANCH }}
           HOMEBREW_FORMULA_PATH: ${{ vars.HOMEBREW_FORMULA_PATH }}
           PACKAGE_REPO_TOKEN: ${{ secrets.PACKAGE_REPO_TOKEN }}
         run: |
@@ -220,6 +221,7 @@ jobs:
           fi
 
           echo "formula_path=${HOMEBREW_FORMULA_PATH:-Formula/terminalninja.rb}" >> "$GITHUB_OUTPUT"
+          echo "branch=${HOMEBREW_TAP_BRANCH:-}" >> "$GITHUB_OUTPUT"
 
           if [ ${#missing[@]} -eq 0 ]; then
             echo "enabled=true" >> "$GITHUB_OUTPUT"
@@ -253,19 +255,37 @@ jobs:
         id: branch
         shell: bash
         working-directory: tap
+        env:
+          REQUESTED_BRANCH: ${{ steps.config.outputs.branch }}
         run: |
-          branch="$(git branch --show-current)"
+          branch="$REQUESTED_BRANCH"
+
           if [ -z "$branch" ]; then
-            remote_head="$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD || true)"
-            if [ -n "$remote_head" ]; then
-              branch="${remote_head#origin/}"
-              git checkout -B "$branch" "$remote_head"
-            fi
+            branch="$(git branch --show-current)"
           fi
 
           if [ -z "$branch" ]; then
-            echo "::error::Homebrew tap checkout is not on a local branch, so the workflow cannot push safely."
+            branch="$(git ls-remote --symref origin HEAD | awk '/^ref:/ {sub("refs/heads/", "", $2); print $2; exit}')"
+          fi
+
+          if [ -z "$branch" ]; then
+            branch="$(git for-each-ref --format='%(refname:short)' refs/remotes/origin | sed -n 's#^origin/##p' | head -n 1)"
+          fi
+
+          if [ -z "$branch" ]; then
+            echo "::error::Unable to determine the Homebrew tap branch. Set HOMEBREW_TAP_BRANCH explicitly."
             git status --short --branch
+            git branch --all
+            exit 1
+          fi
+
+          if git show-ref --verify --quiet "refs/heads/$branch"; then
+            git checkout "$branch"
+          elif git show-ref --verify --quiet "refs/remotes/origin/$branch"; then
+            git checkout -B "$branch" "origin/$branch"
+          else
+            echo "::error::Homebrew tap branch '$branch' does not exist. Set HOMEBREW_TAP_BRANCH to a valid branch name."
+            git branch --all
             exit 1
           fi
 
@@ -315,6 +335,7 @@ jobs:
         shell: bash
         env:
           SCOOP_BUCKET_REPO: ${{ vars.SCOOP_BUCKET_REPO }}
+          SCOOP_BUCKET_BRANCH: ${{ vars.SCOOP_BUCKET_BRANCH }}
           SCOOP_MANIFEST_PATH: ${{ vars.SCOOP_MANIFEST_PATH }}
           PACKAGE_REPO_TOKEN: ${{ secrets.PACKAGE_REPO_TOKEN }}
         run: |
@@ -329,6 +350,7 @@ jobs:
           fi
 
           echo "manifest_path=${SCOOP_MANIFEST_PATH:-bucket/terminalninja.json}" >> "$GITHUB_OUTPUT"
+          echo "branch=${SCOOP_BUCKET_BRANCH:-}" >> "$GITHUB_OUTPUT"
 
           if [ ${#missing[@]} -eq 0 ]; then
             echo "enabled=true" >> "$GITHUB_OUTPUT"
@@ -362,19 +384,37 @@ jobs:
         id: branch
         shell: bash
         working-directory: bucket
+        env:
+          REQUESTED_BRANCH: ${{ steps.config.outputs.branch }}
         run: |
-          branch="$(git branch --show-current)"
+          branch="$REQUESTED_BRANCH"
+
           if [ -z "$branch" ]; then
-            remote_head="$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD || true)"
-            if [ -n "$remote_head" ]; then
-              branch="${remote_head#origin/}"
-              git checkout -B "$branch" "$remote_head"
-            fi
+            branch="$(git branch --show-current)"
           fi
 
           if [ -z "$branch" ]; then
-            echo "::error::Scoop bucket checkout is not on a local branch, so the workflow cannot push safely."
+            branch="$(git ls-remote --symref origin HEAD | awk '/^ref:/ {sub("refs/heads/", "", $2); print $2; exit}')"
+          fi
+
+          if [ -z "$branch" ]; then
+            branch="$(git for-each-ref --format='%(refname:short)' refs/remotes/origin | sed -n 's#^origin/##p' | head -n 1)"
+          fi
+
+          if [ -z "$branch" ]; then
+            echo "::error::Unable to determine the Scoop bucket branch. Set SCOOP_BUCKET_BRANCH explicitly."
             git status --short --branch
+            git branch --all
+            exit 1
+          fi
+
+          if git show-ref --verify --quiet "refs/heads/$branch"; then
+            git checkout "$branch"
+          elif git show-ref --verify --quiet "refs/remotes/origin/$branch"; then
+            git checkout -B "$branch" "origin/$branch"
+          else
+            echo "::error::Scoop bucket branch '$branch' does not exist. Set SCOOP_BUCKET_BRANCH to a valid branch name."
+            git branch --all
             exit 1
           fi
 
