@@ -61,11 +61,18 @@ If a target repository variable or the shared token is missing, that publish job
 
 ### Manual workflow dispatch
 
-You can also run the workflow manually and provide an existing tag:
+You can also run the workflow manually.
 
 1. Open the Actions tab.
 2. Run `Publish Scoop And Homebrew`.
-3. Enter a tag such as `v1.2.3`.
+3. Choose the branch you want to release from, usually `main`.
+4. Enter a tag such as `v1.2.3`.
+5. Leave `create_release` enabled if you want the workflow to:
+   - create the tag when it does not exist yet
+   - create the GitHub Release for that tag
+   - publish the Homebrew and Scoop package updates in the same run
+
+If `create_release` is disabled, the workflow expects the tag to already exist and only performs the package publishing steps.
 
 ## Homebrew Repository Layout
 
