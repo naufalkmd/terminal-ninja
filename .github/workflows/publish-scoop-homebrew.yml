@@ -109,8 +109,8 @@ jobs:
           fi
 
           if [ -z "$tag" ]; then
-          echo "::error::No release tag was provided. Enter a tag, or leave it blank and keep create_release enabled to auto-generate the next semver tag."
-          exit 1
+            echo "::error::No release tag was provided. Enter a tag, or leave it blank and keep create_release enabled to auto-generate the next semver tag."
+            exit 1
           fi
 
           echo "should_publish=true" >> "$GITHUB_OUTPUT"
@@ -319,7 +319,8 @@ jobs:
 
       - name: Skip Homebrew publish
         if: steps.config.outputs.enabled != 'true'
-        run: echo "Homebrew publish skipped because required configuration is missing: ${{ steps.config.outputs.missing }}"
+        run: |
+          echo "Homebrew publish skipped because required configuration is missing: ${{ steps.config.outputs.missing }}"
 
   publish-scoop:
     runs-on: ubuntu-latest
@@ -460,4 +461,5 @@ jobs:
 
       - name: Skip Scoop publish
         if: steps.config.outputs.enabled != 'true'
-        run: echo "Scoop publish skipped because required configuration is missing: ${{ steps.config.outputs.missing }}"
+        run: |
+          echo "Scoop publish skipped because required configuration is missing: ${{ steps.config.outputs.missing }}"
