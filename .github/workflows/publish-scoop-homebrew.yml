@@ -1,0 +1,463 @@
+name: Publish Scoop And Homebrew
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+permissions:
+  actions: read
+  contents: write
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Optional explicit release tag, for example v1.2.3. Leave empty to auto-create the next semver tag.
+        required: false
+        type: string
+      version_bump:
+        description: Which semver segment to increment when tag is left empty
+        required: false
+        default: patch
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      create_release:
+        description: Create the tag and GitHub Release from the selected branch before publishing
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      owner: ${{ steps.context.outputs.owner }}
+      repo: ${{ steps.context.outputs.repo }}
+      tag: ${{ steps.context.outputs.tag }}
+      should_publish: ${{ steps.context.outputs.should_publish }}
+    steps:
+      - name: Checkout repository for manual release preparation
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Resolve publish context
+        id: context
+        shell: bash
+        env:
+          REQUESTED_TAG: ${{ inputs.tag }}
+          CREATE_RELEASE: ${{ inputs.create_release }}
+          VERSION_BUMP: ${{ inputs.version_bump }}
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            tag="${{ github.event.release.tag_name }}"
+
+            if ! [[ "$tag" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+              echo "::notice::Release tag '$tag' does not match v<major>.<minor>.<patch>. Skipping package publish."
+              echo "should_publish=false" >> "$GITHUB_OUTPUT"
+              echo "tag=$tag" >> "$GITHUB_OUTPUT"
+              echo "owner=${{ github.repository_owner }}" >> "$GITHUB_OUTPUT"
+              echo "repo=${GITHUB_REPOSITORY#*/}" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          else
+            tag="$REQUESTED_TAG"
+
+            if [ -z "$tag" ] && [ "$CREATE_RELEASE" = "true" ]; then
+              git fetch --tags origin
+              latest_tag="$(git tag --list 'v*' --sort=-version:refname | head -n 1)"
+              if [ -z "$latest_tag" ]; then
+                latest_tag="v0.0.0"
+              fi
+
+              if ! [[ "$latest_tag" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+                echo "::error::Latest tag '$latest_tag' is not in v<major>.<minor>.<patch> format."
+                exit 1
+              fi
+
+              major="${BASH_REMATCH[1]}"
+              minor="${BASH_REMATCH[2]}"
+              patch="${BASH_REMATCH[3]}"
+
+              case "$VERSION_BUMP" in
+                major)
+                  major=$((major + 1))
+                  minor=0
+                  patch=0
+                  ;;
+                minor)
+                  minor=$((minor + 1))
+                  patch=0
+                  ;;
+                patch)
+                  patch=$((patch + 1))
+                  ;;
+                *)
+                  echo "::error::Unsupported version_bump value '$VERSION_BUMP'."
+                  exit 1
+                  ;;
+              esac
+
+              tag="v$major.$minor.$patch"
+              echo "Automatically selected next release tag $tag from $latest_tag with a $VERSION_BUMP bump."
+            fi
+          fi
+
+          if [ -z "$tag" ]; then
+          echo "::error::No release tag was provided. Enter a tag, or leave it blank and keep create_release enabled to auto-generate the next semver tag."
+          exit 1
+          fi
+
+          echo "should_publish=true" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "owner=${{ github.repository_owner }}" >> "$GITHUB_OUTPUT"
+          echo "repo=${GITHUB_REPOSITORY#*/}" >> "$GITHUB_OUTPUT"
+
+      - name: Create missing tag from selected branch
+        if: github.event_name == 'workflow_dispatch' && inputs.create_release
+        shell: bash
+        env:
+          TAG: ${{ steps.context.outputs.tag }}
+        run: |
+          git fetch --tags origin
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            echo "Tag $TAG already exists."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "$TAG"
+          git push origin "refs/tags/$TAG"
+
+      - name: Verify requested tag exists
+        if: github.event_name == 'workflow_dispatch'
+        shell: bash
+        env:
+          TAG: ${{ steps.context.outputs.tag }}
+        run: |
+          git fetch --tags origin
+          if ! git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            echo "::error::Tag $TAG does not exist. Enable create_release to create it automatically, or push the tag first."
+            exit 1
+          fi
+
+      - name: Create GitHub Release if needed
+        if: github.event_name == 'workflow_dispatch' && inputs.create_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          TAG: ${{ steps.context.outputs.tag }}
+        run: |
+          release_url="https://api.github.com/repos/$REPOSITORY/releases/tags/$TAG"
+          status="$(curl -sS -o release-response.json -w "%{http_code}" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "$release_url")"
+
+          if [ "$status" = "200" ]; then
+            echo "Release for $TAG already exists."
+            exit 0
+          fi
+
+          if [ "$status" != "404" ]; then
+            cat release-response.json
+            echo "::error::Failed to check whether the release for $TAG already exists."
+            exit 1
+          fi
+
+          payload="$(printf '{"tag_name":"%s","name":"%s","generate_release_notes":true}' "$TAG" "$TAG")"
+          curl -fsS \
+            -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -d "$payload" \
+            "https://api.github.com/repos/$REPOSITORY/releases"
+
+  publish-homebrew:
+    runs-on: ubuntu-latest
+    needs: prepare
+    if: needs.prepare.outputs.should_publish == 'true'
+    steps:
+      - name: Resolve Homebrew publish config
+        id: config
+        shell: bash
+        env:
+          HOMEBREW_TAP_REPO: ${{ vars.HOMEBREW_TAP_REPO }}
+          HOMEBREW_TAP_BRANCH: ${{ vars.HOMEBREW_TAP_BRANCH }}
+          HOMEBREW_FORMULA_PATH: ${{ vars.HOMEBREW_FORMULA_PATH }}
+          PACKAGE_REPO_TOKEN: ${{ secrets.PACKAGE_REPO_TOKEN }}
+        run: |
+          missing=()
+
+          if [ -z "$HOMEBREW_TAP_REPO" ]; then
+            missing+=("HOMEBREW_TAP_REPO")
+          fi
+
+          if [ -z "$PACKAGE_REPO_TOKEN" ]; then
+            missing+=("PACKAGE_REPO_TOKEN")
+          fi
+
+          echo "formula_path=${HOMEBREW_FORMULA_PATH:-Formula/terminalninja.rb}" >> "$GITHUB_OUTPUT"
+          echo "branch=${HOMEBREW_TAP_BRANCH:-}" >> "$GITHUB_OUTPUT"
+
+          if [ ${#missing[@]} -eq 0 ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+            echo "repository=$HOMEBREW_TAP_REPO" >> "$GITHUB_OUTPUT"
+            echo "missing=" >> "$GITHUB_OUTPUT"
+          else
+            missing_csv="$(IFS=,; echo "${missing[*]}")"
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "missing=$missing_csv" >> "$GITHUB_OUTPUT"
+            echo "::warning::Homebrew publish skipped. Missing configuration: $missing_csv"
+          fi
+
+      - name: Checkout source repository
+        if: steps.config.outputs.enabled == 'true'
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        if: steps.config.outputs.enabled == 'true'
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.x"
+
+      - name: Render Homebrew formula and Scoop manifest
+        if: steps.config.outputs.enabled == 'true'
+        env:
+          RELEASE_OWNER: ${{ needs.prepare.outputs.owner }}
+          RELEASE_REPO: ${{ needs.prepare.outputs.repo }}
+          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
+        run: python .github/scripts/render_package_manager_assets.py
+
+      - name: Checkout Homebrew tap
+        if: steps.config.outputs.enabled == 'true'
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ steps.config.outputs.repository }}
+          token: ${{ secrets.PACKAGE_REPO_TOKEN }}
+          path: tap
+          fetch-depth: 0
+
+      - name: Resolve Homebrew tap branch
+        if: steps.config.outputs.enabled == 'true'
+        id: branch
+        shell: bash
+        working-directory: tap
+        env:
+          REQUESTED_BRANCH: ${{ steps.config.outputs.branch }}
+        run: |
+          branch="$REQUESTED_BRANCH"
+
+          if [ -z "$branch" ]; then
+            branch="$(git branch --show-current)"
+          fi
+
+          if [ -z "$branch" ]; then
+            branch="$(git ls-remote --symref origin HEAD | awk '/^ref:/ {sub("refs/heads/", "", $2); print $2; exit}')"
+          fi
+
+          if [ -z "$branch" ]; then
+            branch="$(git for-each-ref --format='%(refname:short)' refs/remotes/origin | sed -n 's#^origin/##p' | head -n 1)"
+          fi
+
+          if [ -z "$branch" ]; then
+            echo "::error::Unable to determine the Homebrew tap branch. Set HOMEBREW_TAP_BRANCH explicitly."
+            git status --short --branch
+            git branch --all
+            exit 1
+          fi
+
+          if git show-ref --verify --quiet "refs/heads/$branch"; then
+            git checkout "$branch"
+          elif git show-ref --verify --quiet "refs/remotes/origin/$branch"; then
+            git checkout -B "$branch" "origin/$branch"
+          else
+            echo "::error::Homebrew tap branch '$branch' does not exist. Set HOMEBREW_TAP_BRANCH to a valid branch name."
+            git branch --all
+            exit 1
+          fi
+
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          echo "Publishing Homebrew formula to branch $branch."
+
+      - name: Update formula
+        if: steps.config.outputs.enabled == 'true'
+        shell: bash
+        env:
+          FORMULA_PATH: ${{ steps.config.outputs.formula_path }}
+        run: |
+          mkdir -p "tap/$(dirname "$FORMULA_PATH")"
+          cp dist-package-managers/terminalninja.rb "tap/$FORMULA_PATH"
+
+      - name: Commit and push formula update
+        if: steps.config.outputs.enabled == 'true'
+        shell: bash
+        working-directory: tap
+        env:
+          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
+          FORMULA_PATH: ${{ steps.config.outputs.formula_path }}
+          PUBLISH_BRANCH: ${{ steps.branch.outputs.branch }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$FORMULA_PATH"
+          if git diff --cached --quiet; then
+            echo "No Homebrew changes to commit at $FORMULA_PATH."
+            exit 0
+          fi
+          git status --short
+          git commit -m "Update terminalninja $RELEASE_TAG"
+          git push origin "HEAD:$PUBLISH_BRANCH"
+
+      - name: Skip Homebrew publish
+        if: steps.config.outputs.enabled != 'true'
+        run: echo "Homebrew publish skipped because required configuration is missing: ${{ steps.config.outputs.missing }}"
+
+  publish-scoop:
+    runs-on: ubuntu-latest
+    needs: prepare
+    if: needs.prepare.outputs.should_publish == 'true'
+    steps:
+      - name: Resolve Scoop publish config
+        id: config
+        shell: bash
+        env:
+          SCOOP_BUCKET_REPO: ${{ vars.SCOOP_BUCKET_REPO }}
+          SCOOP_BUCKET_BRANCH: ${{ vars.SCOOP_BUCKET_BRANCH }}
+          SCOOP_MANIFEST_PATH: ${{ vars.SCOOP_MANIFEST_PATH }}
+          PACKAGE_REPO_TOKEN: ${{ secrets.PACKAGE_REPO_TOKEN }}
+        run: |
+          missing=()
+
+          if [ -z "$SCOOP_BUCKET_REPO" ]; then
+            missing+=("SCOOP_BUCKET_REPO")
+          fi
+
+          if [ -z "$PACKAGE_REPO_TOKEN" ]; then
+            missing+=("PACKAGE_REPO_TOKEN")
+          fi
+
+          echo "manifest_path=${SCOOP_MANIFEST_PATH:-bucket/terminalninja.json}" >> "$GITHUB_OUTPUT"
+          echo "branch=${SCOOP_BUCKET_BRANCH:-}" >> "$GITHUB_OUTPUT"
+
+          if [ ${#missing[@]} -eq 0 ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+            echo "repository=$SCOOP_BUCKET_REPO" >> "$GITHUB_OUTPUT"
+            echo "missing=" >> "$GITHUB_OUTPUT"
+          else
+            missing_csv="$(IFS=,; echo "${missing[*]}")"
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "missing=$missing_csv" >> "$GITHUB_OUTPUT"
+            echo "::warning::Scoop publish skipped. Missing configuration: $missing_csv"
+          fi
+
+      - name: Checkout source repository
+        if: steps.config.outputs.enabled == 'true'
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        if: steps.config.outputs.enabled == 'true'
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.x"
+
+      - name: Render Homebrew formula and Scoop manifest
+        if: steps.config.outputs.enabled == 'true'
+        env:
+          RELEASE_OWNER: ${{ needs.prepare.outputs.owner }}
+          RELEASE_REPO: ${{ needs.prepare.outputs.repo }}
+          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
+        run: python .github/scripts/render_package_manager_assets.py
+
+      - name: Checkout Scoop bucket
+        if: steps.config.outputs.enabled == 'true'
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ steps.config.outputs.repository }}
+          token: ${{ secrets.PACKAGE_REPO_TOKEN }}
+          path: bucket
+          fetch-depth: 0
+
+      - name: Resolve Scoop bucket branch
+        if: steps.config.outputs.enabled == 'true'
+        id: branch
+        shell: bash
+        working-directory: bucket
+        env:
+          REQUESTED_BRANCH: ${{ steps.config.outputs.branch }}
+        run: |
+          branch="$REQUESTED_BRANCH"
+
+          if [ -z "$branch" ]; then
+            branch="$(git branch --show-current)"
+          fi
+
+          if [ -z "$branch" ]; then
+            branch="$(git ls-remote --symref origin HEAD | awk '/^ref:/ {sub("refs/heads/", "", $2); print $2; exit}')"
+          fi
+
+          if [ -z "$branch" ]; then
+            branch="$(git for-each-ref --format='%(refname:short)' refs/remotes/origin | sed -n 's#^origin/##p' | head -n 1)"
+          fi
+
+          if [ -z "$branch" ]; then
+            echo "::error::Unable to determine the Scoop bucket branch. Set SCOOP_BUCKET_BRANCH explicitly."
+            git status --short --branch
+            git branch --all
+            exit 1
+          fi
+
+          if git show-ref --verify --quiet "refs/heads/$branch"; then
+            git checkout "$branch"
+          elif git show-ref --verify --quiet "refs/remotes/origin/$branch"; then
+            git checkout -B "$branch" "origin/$branch"
+          else
+            echo "::error::Scoop bucket branch '$branch' does not exist. Set SCOOP_BUCKET_BRANCH to a valid branch name."
+            git branch --all
+            exit 1
+          fi
+
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          echo "Publishing Scoop manifest to branch $branch."
+
+      - name: Update Scoop manifest
+        if: steps.config.outputs.enabled == 'true'
+        shell: bash
+        env:
+          MANIFEST_PATH: ${{ steps.config.outputs.manifest_path }}
+        run: |
+          mkdir -p "bucket/$(dirname "$MANIFEST_PATH")"
+          cp dist-package-managers/terminalninja.json "bucket/$MANIFEST_PATH"
+
+      - name: Commit and push manifest update
+        if: steps.config.outputs.enabled == 'true'
+        shell: bash
+        working-directory: bucket
+        env:
+          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
+          MANIFEST_PATH: ${{ steps.config.outputs.manifest_path }}
+          PUBLISH_BRANCH: ${{ steps.branch.outputs.branch }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$MANIFEST_PATH"
+          if git diff --cached --quiet; then
+            echo "No Scoop changes to commit at $MANIFEST_PATH."
+            exit 0
+          fi
+          git status --short
+          git commit -m "Update terminalninja $RELEASE_TAG"
+          git push origin "HEAD:$PUBLISH_BRANCH"
+
+      - name: Skip Scoop publish
+        if: steps.config.outputs.enabled != 'true'
+        run: echo "Scoop publish skipped because required configuration is missing: ${{ steps.config.outputs.missing }}"
