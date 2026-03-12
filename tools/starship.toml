@@ -1,5 +1,5 @@
 format = """
-[](pine)$os[](fg:pine bg:forest)$shell[](fg:forest bg:moss)$hostname[](fg:moss bg:rose)$username$directory[](fg:rose bg:orange)$git_branch$git_status[](fg:orange bg:slate)$cmd_duration[](fg:slate bg:blue)$time[](fg:blue)
+[](pine)$os[](fg:pine bg:forest)$shell[](fg:forest bg:moss)$hostname[](fg:moss bg:rose)$username$directory[](fg:rose bg:orange)$git_branch$git_status[](fg:orange bg:blue)$cmd_duration[](fg:blue bg:slate)$time[](fg:slate)
 $character
 """
 
@@ -16,7 +16,7 @@ fern = "#27603b"
 mint = "#00c983"
 rose = "#a00634"
 orange = "#c5400b"
-slate = "#382374"
+slate = "#4c3196"
 blue = "#0e4e80"
 cyan = "#45F1C2"
 red = "#ff4d4d"
@@ -114,13 +114,13 @@ format = "[($all_status$ahead_behind )]($style)"
 
 [cmd_duration]
 min_time = 500
-style = "fg:white bg:slate"
+style = "fg:white bg:blue"
 format = "[ 󱎫 $duration ]($style)"
 
 [time]
 disabled = false
 time_format = "%I:%M %p"
-style = "fg:white bg:blue"
+style = "fg:white bg:slate"
 format = "[  $time ]($style)"
 
 [character]

@@ -4,7 +4,7 @@ This repository now supports release-driven package publishing for Homebrew and 
 
 ## What Is Automated
 
-The workflow in `.github/workflows/publish-scoop-homebrew.yml` does this when you publish a GitHub release, or when you run it manually with a tag:
+The workflow in `.github/workflows/publish-scoop-homebrew.yml` does this when you publish a GitHub release, or when you run it manually:
 
 1. Resolves the release tag and repository metadata.
 2. Downloads the GitHub release source archives for that tag.
@@ -66,13 +66,17 @@ You can also run the workflow manually.
 1. Open the Actions tab.
 2. Run `Publish Scoop And Homebrew`.
 3. Choose the branch you want to release from, usually `main`.
-4. Enter a tag such as `v1.2.3`.
-5. Leave `create_release` enabled if you want the workflow to:
-   - create the tag when it does not exist yet
+4. Either enter a tag such as `v1.2.3`, or leave `tag` empty to auto-generate the next semver tag.
+5. If you leave `tag` empty, choose the bump type:
+   - `patch` to go from `v1.0.3` to `v1.0.4`
+   - `minor` to go from `v1.0.3` to `v1.1.0`
+   - `major` to go from `v1.0.3` to `v2.0.0`
+6. Leave `create_release` enabled if you want the workflow to:
+   - create the resolved tag when it does not exist yet
    - create the GitHub Release for that tag
    - publish the Homebrew and Scoop package updates in the same run
 
-If `create_release` is disabled, the workflow expects the tag to already exist and only performs the package publishing steps.
+If `create_release` is disabled, the workflow expects the resolved tag to already exist and only performs the package publishing steps.
 
 ## Homebrew Repository Layout
 
@@ -139,5 +143,5 @@ choco push terminalninja.<version>.nupkg --source https://push.chocolatey.org/ -
 
 - The generated Homebrew formula is based on `packaging/terminalninja.rb.template`; the root-level `terminalninja.rb` file is a checked-in rendered snapshot.
 - The generated Scoop manifest is based on `packaging/terminalninja-scoop.json.template`.
-- The workflow publishes source-archive based packages, so the release tag must exist before the job runs.
+- On manual workflow dispatch, the workflow can auto-create the next semver tag if you leave `tag` empty and keep `create_release` enabled.
 - If you change install behavior, update both templates and this guide.

@@ -24,7 +24,7 @@ def sha256_for_url(url: str) -> str:
         if error.code == 404:
             raise RuntimeError(
                 f"Release archive not found: {url}. "
-                "Ensure the tag exists and is pushed. For workflow_dispatch, use an existing tag such as v1.2.3."
+                "Ensure the tag exists and is pushed. For workflow_dispatch, either provide a tag explicitly or let the workflow create one."
             ) from error
 
         raise RuntimeError(f"Failed to download release archive {url}: HTTP {error.code}") from error
