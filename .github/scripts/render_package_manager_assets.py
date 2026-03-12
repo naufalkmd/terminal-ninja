@@ -5,33 +5,63 @@ import json
 import os
 from pathlib import Path
 import sys
+import time
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+DEFAULT_ARCHIVE_DOWNLOAD_ATTEMPTS = 6
+DEFAULT_ARCHIVE_DOWNLOAD_DELAY_SECONDS = 5.0
 
-def sha256_for_url(url: str) -> str:
-    digest = hashlib.sha256()
+
+def sha256_for_url(
+    url: str,
+    *,
+    max_attempts: int = DEFAULT_ARCHIVE_DOWNLOAD_ATTEMPTS,
+    retry_delay_seconds: float = DEFAULT_ARCHIVE_DOWNLOAD_DELAY_SECONDS,
+) -> str:
     request = Request(url, headers={"User-Agent": "terminalninja-release-renderer/1.0"})
 
-    try:
-        with urlopen(request) as response:
-            while True:
-                chunk = response.read(1024 * 1024)
-                if not chunk:
-                    break
-                digest.update(chunk)
-    except HTTPError as error:
-        if error.code == 404:
-            raise RuntimeError(
-                f"Release archive not found: {url}. "
-                "Ensure the tag exists and is pushed. For workflow_dispatch, either provide a tag explicitly or let the workflow create one."
-            ) from error
+    for attempt in range(1, max_attempts + 1):
+        digest = hashlib.sha256()
 
-        raise RuntimeError(f"Failed to download release archive {url}: HTTP {error.code}") from error
-    except URLError as error:
-        raise RuntimeError(f"Failed to download release archive {url}: {error.reason}") from error
+        try:
+            with urlopen(request) as response:
+                while True:
+                    chunk = response.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    digest.update(chunk)
+            return digest.hexdigest()
+        except HTTPError as error:
+            if error.code == 404 and attempt < max_attempts:
+                print(
+                    f"Release archive {url} is not available yet (attempt {attempt}/{max_attempts}). "
+                    f"Retrying in {retry_delay_seconds:g} seconds...",
+                    file=sys.stderr,
+                )
+                time.sleep(retry_delay_seconds)
+                continue
 
-    return digest.hexdigest()
+            if error.code == 404:
+                raise RuntimeError(
+                    f"Release archive not found: {url}. "
+                    "Ensure the tag exists and is pushed. For workflow_dispatch, either provide a tag explicitly or let the workflow create one."
+                ) from error
+
+            raise RuntimeError(f"Failed to download release archive {url}: HTTP {error.code}") from error
+        except URLError as error:
+            if attempt < max_attempts:
+                print(
+                    f"Failed to download release archive {url}: {error.reason}. "
+                    f"Retrying in {retry_delay_seconds:g} seconds (attempt {attempt}/{max_attempts})...",
+                    file=sys.stderr,
+                )
+                time.sleep(retry_delay_seconds)
+                continue
+
+            raise RuntimeError(f"Failed to download release archive {url}: {error.reason}") from error
+
+    raise RuntimeError(f"Failed to download release archive {url} after {max_attempts} attempts.")
 
 
 def render_template(path: Path, replacements: dict[str, str]) -> str:
