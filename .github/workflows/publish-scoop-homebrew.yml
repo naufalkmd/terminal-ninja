@@ -169,38 +169,9 @@ jobs:
             -d "$payload" \
             "https://api.github.com/repos/$REPOSITORY/releases"
 
-  render:
-    runs-on: ubuntu-latest
-    needs: prepare
-    outputs:
-      version: ${{ steps.render.outputs.version }}
-      tag: ${{ steps.render.outputs.tag }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.x"
-
-      - name: Render Homebrew formula and Scoop manifest
-        id: render
-        env:
-          RELEASE_OWNER: ${{ needs.prepare.outputs.owner }}
-          RELEASE_REPO: ${{ needs.prepare.outputs.repo }}
-          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
-        run: python .github/scripts/render_package_manager_assets.py
-
-      - name: Upload generated package manager assets
-        uses: actions/upload-artifact@v6
-        with:
-          name: package-manager-assets
-          path: dist-package-managers/
-
   publish-homebrew:
     runs-on: ubuntu-latest
-    needs: render
+    needs: prepare
     steps:
       - name: Resolve Homebrew publish config
         id: config
@@ -235,12 +206,23 @@ jobs:
             echo "::warning::Homebrew publish skipped. Missing configuration: $missing_csv"
           fi
 
-      - name: Download generated assets
+      - name: Checkout source repository
         if: steps.config.outputs.enabled == 'true'
-        uses: actions/download-artifact@v6
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        if: steps.config.outputs.enabled == 'true'
+        uses: actions/setup-python@v6
         with:
-          name: package-manager-assets
-          path: dist-package-managers
+          python-version: "3.x"
+
+      - name: Render Homebrew formula and Scoop manifest
+        if: steps.config.outputs.enabled == 'true'
+        env:
+          RELEASE_OWNER: ${{ needs.prepare.outputs.owner }}
+          RELEASE_REPO: ${{ needs.prepare.outputs.repo }}
+          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
+        run: python .github/scripts/render_package_manager_assets.py
 
       - name: Checkout Homebrew tap
         if: steps.config.outputs.enabled == 'true'
@@ -307,7 +289,7 @@ jobs:
         shell: bash
         working-directory: tap
         env:
-          RELEASE_TAG: ${{ needs.render.outputs.tag }}
+          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
           FORMULA_PATH: ${{ steps.config.outputs.formula_path }}
           PUBLISH_BRANCH: ${{ steps.branch.outputs.branch }}
         run: |
@@ -329,7 +311,7 @@ jobs:
 
   publish-scoop:
     runs-on: ubuntu-latest
-    needs: render
+    needs: prepare
     steps:
       - name: Resolve Scoop publish config
         id: config
@@ -364,12 +346,23 @@ jobs:
             echo "::warning::Scoop publish skipped. Missing configuration: $missing_csv"
           fi
 
-      - name: Download generated assets
+      - name: Checkout source repository
         if: steps.config.outputs.enabled == 'true'
-        uses: actions/download-artifact@v6
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        if: steps.config.outputs.enabled == 'true'
+        uses: actions/setup-python@v6
         with:
-          name: package-manager-assets
-          path: dist-package-managers
+          python-version: "3.x"
+
+      - name: Render Homebrew formula and Scoop manifest
+        if: steps.config.outputs.enabled == 'true'
+        env:
+          RELEASE_OWNER: ${{ needs.prepare.outputs.owner }}
+          RELEASE_REPO: ${{ needs.prepare.outputs.repo }}
+          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
+        run: python .github/scripts/render_package_manager_assets.py
 
       - name: Checkout Scoop bucket
         if: steps.config.outputs.enabled == 'true'
@@ -436,7 +429,7 @@ jobs:
         shell: bash
         working-directory: bucket
         env:
-          RELEASE_TAG: ${{ needs.render.outputs.tag }}
+          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
           MANIFEST_PATH: ${{ steps.config.outputs.manifest_path }}
           PUBLISH_BRANCH: ${{ steps.branch.outputs.branch }}
         run: |
