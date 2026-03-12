@@ -48,7 +48,7 @@ Included shell coverage:
 
 - PowerShell / pwsh: Starship, PSReadLine, completions, aliases, and helper functions
 - bash: Starship, history tuning, completion loading, aliases, and helper functions
-- zsh: Starship, history tuning, compinit bindings, aliases, and helper functions
+- zsh: Starship, history tuning, `compinit`, completion menu defaults, aliases, helper functions, and optional autosuggestions when `zsh-autosuggestions` is already installed
 - WSL: automatic sourcing of the same bash/zsh configs from your Windows home directory
 
 This repository provides:
@@ -72,7 +72,7 @@ This repository provides:
 
 - PowerShell: PSReadLine predictive suggestions, menu completion, and typo correction
 - bash: history search bindings, menu completion, and bash-completion loading when available
-- zsh: history search bindings, `compinit`, and shared history options
+- zsh: history search bindings, `compinit`, completion menu defaults, shared history options, and optional autosuggestions when `zsh-autosuggestions` is already installed
 
 ### Shared shortcuts
 

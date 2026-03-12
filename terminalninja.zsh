@@ -42,11 +42,47 @@ _terminal_ninja_reset_starship_zsh() {
     unfunction prompt_starship_precmd prompt_starship_preexec starship_zle-keymap-select starship_zle-keymap-select-wrapped __starship_get_time >/dev/null 2>&1 || true
 }
 
+_terminal_ninja_enable_zsh_completion_menu() {
+    if zmodload zsh/complist 2>/dev/null; then
+        if ! zstyle -L ':completion:*' menu >/dev/null 2>&1; then
+            zstyle ':completion:*' menu select
+        fi
+    fi
+}
+
+_terminal_ninja_load_zsh_autosuggestions() {
+    (( $+functions[_zsh_autosuggest_start] )) && return 0
+    [[ -n "${ZSH_AUTOSUGGEST_VERSION:-}" ]] && return 0
+
+    local candidate
+    local -a candidates=()
+
+    if [[ -n "${HOMEBREW_PREFIX:-}" ]]; then
+        candidates+=("${HOMEBREW_PREFIX}/share/zsh-autosuggestions/zsh-autosuggestions.zsh")
+    fi
+
+    candidates+=(
+        /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+        /usr/local/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+    )
+
+    for candidate in "${candidates[@]}"; do
+        if [[ -r "$candidate" ]]; then
+            source "$candidate"
+            return 0
+        fi
+    done
+
+    return 1
+}
+
 if _terminal_ninja_starship >/dev/null 2>&1 && [[ -f "$STARSHIP_CONFIG" ]]; then
     _terminal_ninja_starship_path="$(_terminal_ninja_starship)"
     _terminal_ninja_reset_starship_zsh
     eval "$("${_terminal_ninja_starship_path}" init zsh)"
 fi
+
+_terminal_ninja_enable_zsh_completion_menu
 
 HISTSIZE=${HISTSIZE:-10000}
 SAVEHIST=${SAVEHIST:-20000}
@@ -70,7 +106,14 @@ bindkey '^[[A' up-line-or-beginning-search
 bindkey '^[[B' down-line-or-beginning-search
 bindkey '^L' clear-screen
 
-alias ll='ls -lah --color=auto'
+if ls --color=auto -d . >/dev/null 2>&1; then
+    alias ll='ls -lah --color=auto'
+elif ls -G -d . >/dev/null 2>&1; then
+    alias ll='ls -lah -G'
+else
+    alias ll='ls -lah'
+fi
+
 alias la='ls -A'
 alias c='clear'
 
@@ -123,7 +166,15 @@ function findinfiles() {
 }
 
 function memorytop() {
-    ps -eo pid,comm,%mem,%cpu --sort=-%mem | head -n 11
+    if ps -eo pid,comm,%mem,%cpu --sort=-%mem >/dev/null 2>&1; then
+        ps -eo pid,comm,%mem,%cpu --sort=-%mem | head -n 11
+        return
+    fi
+
+    local output
+    output="$(ps -axo pid,comm,%mem,%cpu 2>/dev/null)" || return 1
+    printf '%s\n' "$output" | head -n 1
+    printf '%s\n' "$output" | tail -n +2 | sort -k3,3nr | head -n 10
 }
 
 function gs() {
@@ -141,3 +192,5 @@ function gc() {
 function gp() {
     git push "$@"
 }
+
+_terminal_ninja_load_zsh_autosuggestions >/dev/null 2>&1 || true

@@ -3,6 +3,8 @@
 
 # ============ Force PSReadLine 2.4.5 ============
 Import-Module PSReadLine -RequiredVersion 2.4.5 -ErrorAction SilentlyContinue
+$psReadLineOptionCommand = Get-Command Set-PSReadLineOption -ErrorAction SilentlyContinue
+$psReadLineKeyHandlerCommand = Get-Command Set-PSReadLineKeyHandler -ErrorAction SilentlyContinue
 
 # ============ Starship Initialization ============
 $env:STARSHIP_CONFIG = Join-Path $PSScriptRoot 'starship.toml'
@@ -14,7 +16,7 @@ if (-not $starship) {
 if ($starship -and (Test-Path $env:STARSHIP_CONFIG)) {
     & $starship.Source init powershell | Out-String | Invoke-Expression
 
-    if (Get-Command Set-PSReadLineOption -ErrorAction SilentlyContinue) {
+    if ($psReadLineOptionCommand) {
         Set-PSReadLineOption -ContinuationPrompt '>> '
     }
 
@@ -28,7 +30,7 @@ if ($starship -and (Test-Path $env:STARSHIP_CONFIG)) {
 # ============ FiraCode Nerd Font Auto-Installation ============
 $fontInstalledMarker = "$env:TEMP\.firacode_nerd_installed"
 
-if (-not (Test-Path $fontInstalledMarker)) {
+if ($IsWindows -and -not (Test-Path $fontInstalledMarker)) {
     $fontPath = Join-Path $PSScriptRoot "FiraCodeNerdFont-Medium.ttf"
     if (Test-Path $fontPath) {
         $fontFileName = Split-Path $fontPath -Leaf
@@ -40,7 +42,10 @@ if (-not (Test-Path $fontInstalledMarker)) {
                 $fontsFolder.CopyHere($fontPath, 0x10 + 0x4)
             } catch { }
         }
-        New-Item -ItemType File -Path $fontInstalledMarker -Force | Out-Null
+
+        if (Test-Path $installedFontPath) {
+            New-Item -ItemType File -Path $fontInstalledMarker -Force | Out-Null
+        }
     }
 }
 
@@ -57,38 +62,42 @@ $PSReadLineOptions = @{
     }
 }
 
-Set-PSReadLineOption @PSReadLineOptions
+if ($psReadLineOptionCommand) {
+    Set-PSReadLineOption @PSReadLineOptions
 
-# ============ PSReadLine Predictive IntelliSense ============
-try {
-    Set-PSReadLineOption -PredictionViewStyle ListView -ErrorAction Stop
-    Set-PSReadLineOption -PredictionSource HistoryAndPlugin -ErrorAction Stop
-    Set-PSReadLineOption -HistoryNoDuplicates -ErrorAction Stop
-    Set-PSReadLineOption -MaximumHistoryCount 10000 -ErrorAction Stop
-    Set-PSReadLineOption -ShowToolTips -ErrorAction Stop
-    Set-PSReadLineOption -CompletionQueryItems 200 -ErrorAction Stop
-    Set-PSReadLineOption -MaximumCompletionCount 200 -ErrorAction Stop
-    Set-PSReadLineOption -Colors @{
-        InlinePrediction = '#8A8A8A'
-        ListPrediction   = '#00BFFF'
-        Command          = '#00FF00'
-        Parameter        = '#FFD700'
+    # ============ PSReadLine Predictive IntelliSense ============
+    try {
+        Set-PSReadLineOption -PredictionViewStyle ListView -ErrorAction Stop
+        Set-PSReadLineOption -PredictionSource HistoryAndPlugin -ErrorAction Stop
+        Set-PSReadLineOption -HistoryNoDuplicates -ErrorAction Stop
+        Set-PSReadLineOption -MaximumHistoryCount 10000 -ErrorAction Stop
+        Set-PSReadLineOption -ShowToolTips -ErrorAction Stop
+        Set-PSReadLineOption -CompletionQueryItems 200 -ErrorAction Stop
+        Set-PSReadLineOption -MaximumCompletionCount 200 -ErrorAction Stop
+        Set-PSReadLineOption -Colors @{
+            InlinePrediction = '#8A8A8A'
+            ListPrediction   = '#00BFFF'
+            Command          = '#00FF00'
+            Parameter        = '#FFD700'
+        }
+    } catch {
     }
-} catch {
 }
 
 # ============ PSReadLine Key Bindings ============
-Set-PSReadLineKeyHandler -Key Tab -Function MenuComplete
-Set-PSReadLineKeyHandler -Key Shift+Tab -Function MenuComplete
-Set-PSReadLineKeyHandler -Key Ctrl+Spacebar -Function Complete
-Set-PSReadLineKeyHandler -Key Ctrl+r -Function ReverseSearchHistory
-Set-PSReadLineKeyHandler -Key Ctrl+s -Function ForwardSearchHistory
-Set-PSReadLineKeyHandler -Key Ctrl+l -Function ClearScreen
-Set-PSReadLineKeyHandler -Key Alt+f -Function ForwardWord
-Set-PSReadLineKeyHandler -Key Alt+b -Function BackwardWord
-Set-PSReadLineKeyHandler -Key Ctrl+RightArrow -Function ForwardWord
-Set-PSReadLineKeyHandler -Key RightArrow -Function ForwardChar
-Set-PSReadLineKeyHandler -Key End -Function EndOfLine
+if ($psReadLineKeyHandlerCommand) {
+    Set-PSReadLineKeyHandler -Key Tab -Function MenuComplete
+    Set-PSReadLineKeyHandler -Key Shift+Tab -Function MenuComplete
+    Set-PSReadLineKeyHandler -Key Ctrl+Spacebar -Function Complete
+    Set-PSReadLineKeyHandler -Key Ctrl+r -Function ReverseSearchHistory
+    Set-PSReadLineKeyHandler -Key Ctrl+s -Function ForwardSearchHistory
+    Set-PSReadLineKeyHandler -Key Ctrl+l -Function ClearScreen
+    Set-PSReadLineKeyHandler -Key Alt+f -Function ForwardWord
+    Set-PSReadLineKeyHandler -Key Alt+b -Function BackwardWord
+    Set-PSReadLineKeyHandler -Key Ctrl+RightArrow -Function ForwardWord
+    Set-PSReadLineKeyHandler -Key RightArrow -Function ForwardChar
+    Set-PSReadLineKeyHandler -Key End -Function EndOfLine
+}
 
 # ============ Command Completions ============
 $gitCommands = @(
@@ -140,32 +149,92 @@ Register-ArgumentCompleter -Native -CommandName brew -ScriptBlock {
 }.GetNewClosure()
 
 # ============ Command Autocorrect ============
-$CommandCorrections = @{
-    'gti'   = 'git'
-    'gt'    = 'git'
-    'claer' = 'clear'
-    'celar' = 'clear'
-    'cler'  = 'clear'
-    'cd..'  = 'cd ..'
-    'sl'    = 'ls'
-    'coce'  = 'code'
-    'pyhton' = 'python'
-    'pytohn' = 'python'
-    'ndoe'   = 'node'
-    'naem'   = 'name'
-    'mkdri'  = 'mkdir'
-    'mkidr'  = 'mkdir'
+$script:TerminalNinjaPreviousCommandNotFoundAction = $ExecutionContext.InvokeCommand.CommandNotFoundAction
+$script:TerminalNinjaCommandCorrections = @{
+    'gti' = @{
+        Description = 'git'
+        CommandName = 'git'
+        ScriptBlock = { git @args }.GetNewClosure()
+    }
+    'gt' = @{
+        Description = 'git'
+        CommandName = 'git'
+        ScriptBlock = { git @args }.GetNewClosure()
+    }
+    'claer' = @{
+        Description = 'clear'
+        CommandName = 'Clear-Host'
+        ScriptBlock = { Clear-Host }.GetNewClosure()
+    }
+    'celar' = @{
+        Description = 'clear'
+        CommandName = 'Clear-Host'
+        ScriptBlock = { Clear-Host }.GetNewClosure()
+    }
+    'cler' = @{
+        Description = 'clear'
+        CommandName = 'Clear-Host'
+        ScriptBlock = { Clear-Host }.GetNewClosure()
+    }
+    'cd..' = @{
+        Description = 'cd ..'
+        CommandName = 'Set-Location'
+        ScriptBlock = { Set-Location .. }.GetNewClosure()
+    }
+    'sl' = @{
+        Description = 'ls'
+        CommandName = 'Get-ChildItem'
+        ScriptBlock = { Get-ChildItem @args }.GetNewClosure()
+    }
+    'coce' = @{
+        Description = 'code'
+        CommandName = 'code'
+        ScriptBlock = { code @args }.GetNewClosure()
+    }
+    'pyhton' = @{
+        Description = 'python'
+        CommandName = 'python'
+        ScriptBlock = { python @args }.GetNewClosure()
+    }
+    'pytohn' = @{
+        Description = 'python'
+        CommandName = 'python'
+        ScriptBlock = { python @args }.GetNewClosure()
+    }
+    'ndoe' = @{
+        Description = 'node'
+        CommandName = 'node'
+        ScriptBlock = { node @args }.GetNewClosure()
+    }
+    'naem' = @{
+        Description = 'name'
+        CommandName = 'name'
+        ScriptBlock = { name @args }.GetNewClosure()
+    }
+    'mkdri' = @{
+        Description = 'mkdir'
+        CommandName = 'mkdir'
+        ScriptBlock = { mkdir @args }.GetNewClosure()
+    }
+    'mkidr' = @{
+        Description = 'mkdir'
+        CommandName = 'mkdir'
+        ScriptBlock = { mkdir @args }.GetNewClosure()
+    }
 }
 
 $ExecutionContext.InvokeCommand.CommandNotFoundAction = {
     param($CommandName, $CommandLookupEventArgs)
 
-    if ($CommandCorrections.ContainsKey($CommandName)) {
-        $Correction = $CommandCorrections[$CommandName]
-        Write-Host "Autocorrecting '$CommandName' to '$Correction'" -ForegroundColor Yellow
-        $CommandLookupEventArgs.CommandScriptBlock = {
-            & $Correction @args
-        }.GetNewClosure()
+    $Correction = $script:TerminalNinjaCommandCorrections[$CommandName]
+    if ($Correction -and (Get-Command $Correction.CommandName -ErrorAction SilentlyContinue)) {
+        Write-Host "Autocorrecting '$CommandName' to '$($Correction.Description)'" -ForegroundColor Yellow
+        $CommandLookupEventArgs.CommandScriptBlock = $Correction.ScriptBlock
+        return
+    }
+
+    if ($script:TerminalNinjaPreviousCommandNotFoundAction) {
+        & $script:TerminalNinjaPreviousCommandNotFoundAction $CommandName $CommandLookupEventArgs
     }
 }
 
@@ -226,17 +295,32 @@ function Get-MemoryProcesses {
 }
 
 function gs {
-    git status
+    git status @args
 }
 
 function gaa {
-    git add .
+    if ($args.Count -eq 0) {
+        git add .
+        return
+    }
+
+    git add @args
 }
 
 function gc {
-    git commit -m $args
+    if ($args.Count -eq 0) {
+        git commit
+        return
+    }
+
+    if ($args | Where-Object { "$_".StartsWith('-') }) {
+        git commit @args
+        return
+    }
+
+    git commit -m ($args -join ' ')
 }
 
 function gp {
-    git push
+    git push @args
 }

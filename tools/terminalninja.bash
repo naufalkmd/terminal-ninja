@@ -49,7 +49,14 @@ bind '"\e[B": history-search-forward'
 bind '"\C-l": clear-screen'
 bind 'TAB:menu-complete'
 
-alias ll='ls -lah --color=auto'
+if ls --color=auto -d . >/dev/null 2>&1; then
+    alias ll='ls -lah --color=auto'
+elif ls -G -d . >/dev/null 2>&1; then
+    alias ll='ls -lah -G'
+else
+    alias ll='ls -lah'
+fi
+
 alias la='ls -A'
 alias c='clear'
 
@@ -102,7 +109,15 @@ findinfiles() {
 }
 
 memorytop() {
-    ps -eo pid,comm,%mem,%cpu --sort=-%mem | head -n 11
+    if ps -eo pid,comm,%mem,%cpu --sort=-%mem >/dev/null 2>&1; then
+        ps -eo pid,comm,%mem,%cpu --sort=-%mem | head -n 11
+        return
+    fi
+
+    local output
+    output="$(ps -axo pid,comm,%mem,%cpu 2>/dev/null)" || return 1
+    printf '%s\n' "$output" | head -n 1
+    printf '%s\n' "$output" | tail -n +2 | sort -k3,3nr | head -n 10
 }
 
 gs() {

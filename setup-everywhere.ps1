@@ -206,7 +206,81 @@ function Install-WslStarship {
         return
     }
 
-        $script = 'set -e; export PATH="$HOME/.local/bin:$PATH"; if command -v starship >/dev/null 2>&1; then exit 0; fi; if ! command -v curl >/dev/null 2>&1 && ! command -v wget >/dev/null 2>&1; then echo missing-downloader; exit 12; fi; mkdir -p "$HOME/.local/bin"; if command -v curl >/dev/null 2>&1; then curl -fsSL https://starship.rs/install.sh | sh -s -- -y -b "$HOME/.local/bin"; else wget -qO- https://starship.rs/install.sh | sh -s -- -y -b "$HOME/.local/bin"; fi'
+    $script = @'
+set -e
+export PATH="$HOME/.local/bin:$PATH"
+
+if command -v starship >/dev/null 2>&1; then
+  exit 0
+fi
+
+if ! command -v curl >/dev/null 2>&1 && ! command -v wget >/dev/null 2>&1; then
+  exit 12
+fi
+
+if ! command -v tar >/dev/null 2>&1; then
+  exit 13
+fi
+
+arch="$(uname -m)"
+case "$arch" in
+  x86_64|amd64)
+    target="x86_64-unknown-linux-musl"
+    ;;
+  aarch64|arm64)
+    target="aarch64-unknown-linux-musl"
+    ;;
+  *)
+    exit 14
+    ;;
+esac
+
+tmpdir="$(mktemp -d)"
+cleanup() {
+  rm -rf "$tmpdir"
+}
+trap cleanup EXIT
+
+archive="starship-${target}.tar.gz"
+checksum="${archive}.sha256"
+base_url="https://github.com/starship/starship/releases/latest/download"
+
+download() {
+  url="$1"
+  destination="$2"
+
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL "$url" -o "$destination"
+  else
+    wget -qO "$destination" "$url"
+  fi
+}
+
+download "$base_url/$archive" "$tmpdir/$archive"
+download "$base_url/$checksum" "$tmpdir/$checksum"
+
+if command -v sha256sum >/dev/null 2>&1; then
+  (cd "$tmpdir" && sha256sum -c "$checksum")
+else
+  expected="$(awk '{print $1}' "$tmpdir/$checksum")"
+
+  if command -v shasum >/dev/null 2>&1; then
+    actual="$(shasum -a 256 "$tmpdir/$archive" | awk '{print $1}')"
+  elif command -v openssl >/dev/null 2>&1; then
+    actual="$(openssl dgst -sha256 "$tmpdir/$archive" | awk '{print $NF}')"
+  else
+    exit 16
+  fi
+
+  if [ "$expected" != "$actual" ]; then
+    exit 15
+  fi
+fi
+
+mkdir -p "$HOME/.local/bin"
+tar -xzf "$tmpdir/$archive" -C "$tmpdir" starship
+install -m 0755 "$tmpdir/starship" "$HOME/.local/bin/starship"
+'@
 
     $exitCode = Invoke-WslShell -Distro $Distro -Command $script
     if ($exitCode -eq 0) {
@@ -223,6 +297,26 @@ function Install-WslStarship {
 
     if ($exitCode -eq 12) {
         Write-Warning "WSL distro '$Distro' is missing curl/wget; cannot auto-install starship."
+        return
+    }
+
+    if ($exitCode -eq 13) {
+        Write-Warning "WSL distro '$Distro' is missing tar; cannot auto-install starship."
+        return
+    }
+
+    if ($exitCode -eq 14) {
+        Write-Warning "WSL distro '$Distro' uses an unsupported CPU architecture for the built-in Starship installer."
+        return
+    }
+
+    if ($exitCode -eq 15) {
+        Write-Warning "WSL distro '$Distro': downloaded Starship checksum did not match. Installation aborted."
+        return
+    }
+
+    if ($exitCode -eq 16) {
+        Write-Warning "WSL distro '$Distro' is missing sha256sum/shasum/openssl; cannot verify the Starship download safely."
         return
     }
 
