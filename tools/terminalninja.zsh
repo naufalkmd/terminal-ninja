@@ -25,8 +25,8 @@ _terminal_ninja_starship() {
 _terminal_ninja_reset_starship_zsh() {
     autoload -Uz add-zsh-hook
 
-    while add-zsh-hook -d precmd prompt_starship_precmd >/dev/null 2>&1; do :; done
-    while add-zsh-hook -d preexec prompt_starship_preexec >/dev/null 2>&1; do :; done
+    add-zsh-hook -d precmd prompt_starship_precmd >/dev/null 2>&1 || true
+    add-zsh-hook -d preexec prompt_starship_preexec >/dev/null 2>&1 || true
 
     if [[ -n "${__starship_preserved_zle_keymap_select:-}" ]]; then
         zle -N zle-keymap-select "$__starship_preserved_zle_keymap_select" 2>/dev/null || true
